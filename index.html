@@ -2,10 +2,32 @@
 <head>
     <title>Michael Beaver: now in digital form</title>
     <link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+    <script src="tonejs.github.io/build/Tone.js"></script>
+    <script src="tonejs.github.io/js/tone-ui.js"></script>
+    <script src="tonejs.github.io/js/components.js"></script>
 </head>
 <body>
 <div id="content">
     <p>Michael Beaver</p>
+    <div id="button">hi</div>
 </div>
 </body>
+    <script type="text/javascript">
+        import { Sampler } from "tone";
+
+        const sampler = new Sampler(
+          {
+            A1: "A1.mp3"
+          },
+          {
+            onload: () => {
+              document.querySelector("button").removeAttribute("disabled");
+            }
+          }
+        ).toDestination();
+        
+        document.querySelector("button").addEventListener("click", () => {
+          sampler.triggerAttack("A2");
+        });
+    </script>
 </html>
