@@ -7,9 +7,9 @@ let loopA;
 let loopB;
 let loopC;
 
-let minBPM = 50;
-let defaultBPM = 72;
-let maxBPM = 148;
+let minBPM = 67;
+let defaultBPM = 88;
+let maxBPM = 222;
 let initialized = false;
 let isPlaying = false;
 function handlePlay() {
@@ -28,7 +28,8 @@ function handlePlay() {
   } else {
     document.getElementById("play").innerHTML = "my ears are bleeding please stop";
     Tone.getTransport().bpm.value = defaultBPM;
-    Math.floor(Math.random() * 2) > 0 ? playRandom() : pleasantHum();
+    // Math.floor(Math.random() * 2) > 0 ? playRandom() : pleasantHum();
+    playRandom();
   }
   isPlaying = !isPlaying;
 }
