@@ -7,9 +7,9 @@ let loopA;
 let loopB;
 let loopC;
 
-let minBPM = 67;
-let defaultBPM = 88;
-let maxBPM = 222;
+let minBPM = 50;
+let defaultBPM = 72;
+let maxBPM = 148;
 let initialized = false;
 let isPlaying = false;
 function handlePlay() {
@@ -24,12 +24,13 @@ function handlePlay() {
     if (loopA) {loopA.stop(); loopA.dispose();}
     if (loopB) {loopB.stop(); loopB.dispose();}
     if (loopC) {loopC.stop(); loopC.dispose();}
-    document.getElementById("play").innerHTML = "play something else";
+    document.getElementById("play").innerHTML = "🔃 🤖 🎶 🔊";
+    document.getElementById("play").setAttribute("title", "ok i miss it play something else");
   } else {
-    document.getElementById("play").innerHTML = "my ears are bleeding please stop";
+    document.getElementById("play").innerHTML = "🙉 🦻 🩸 🙏 🛑 🔇";
+    document.getElementById("play").setAttribute("title", "ouch my ears are bleeding please stop");
     Tone.getTransport().bpm.value = defaultBPM;
-    // Math.floor(Math.random() * 2) > 0 ? playRandom() : pleasantHum();
-    playRandom();
+    Math.floor(Math.random() * 2) > 0 ? playRandom() : pleasantHum();
   }
   isPlaying = !isPlaying;
 }
