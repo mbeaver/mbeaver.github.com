@@ -23,7 +23,7 @@ body {
 }
 
 #content img {
-  padding: 48px 0 48px 0;
+  padding: 24px 0 48px 0;
 }
 
 #content div {
@@ -48,28 +48,28 @@ body {
   text-align: center;
   text-decoration: none;
   font-size: 1.2em;
-  width: 360px;
+  width: 300px;
   padding: 8px 0 8px 0;
   margin-bottom: 20px;
   cursor: pointer;
 }
 
 #logo {
-  height: 720px;
-  width: 720px;
+  height: 700px;
+  width: 700px;
 }
 
 @media only screen and (max-width: 1024px){
-  #logo {height: 512px; width: 512px;}
-  body {font-size: 20px;}
+  #logo {height: 500px; width: 500px;}
+  body {font-size: 22px;}
 }
 
 @media only screen and (max-width: 768px){
-  #logo {height: 333px; width: 333px;}
+  #logo {height: 400px; width: 400px;}
   body {font-size: 20px;}
 }
 
 @media only screen and (max-width: 480px){
-  #logo {height: 306px; width: 306px;}
+  #logo {height: 300px; width: 300px;}
   body {font-size: 18px;}
 }
