@@ -54,6 +54,11 @@ body {
   cursor: pointer;
 }
 
+#content p.version {
+    font-size: .7em;
+    margin-top: 48px;
+}
+
 #logo {
   height: 700px;
   width: 700px;
