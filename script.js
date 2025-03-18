@@ -55,25 +55,26 @@ function pleasantHum() {
 }
 
 function derivePentatonicScale(rootNote, mode) {
-  // const notes = ["A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#"];
-  var newArray = [];
-  var i = notes.indexOf(rootNote);
+  let keyNotes = [];
+  let i = notes.indexOf(rootNote);
+  
   if (i == 0) {
-    newArray = notes;
+    keyNotes = notes;
   } else if (i == notes.length - 1) {
-    newArray = newArray.concat(notes[i]);
-    newArray = newArray.concat(notes.slice(0, i));
+    keyNotes.push(notes[i]);
+    keyNotes.push(...notes.slice(0, i));
   } else {
-    newArray = newArray.concat(notes.slice(i, notes.length));
-    newArray = newArray.concat(notes.slice(0, i));
+    keyNotes.push(...notes.slice(i, notes.length));
+    keyNotes.push(...notes.slice(0, i));
   }
 
-  if (mode == "minor") {
-    newArray = [newArray[0], newArray[3], newArray[5], newArray[7], newArray[10]];
-  } else {
-    newArray = [newArray[0], newArray[2], newArray[4], newArray[7], newArray[9]]
+  let pentaindices = mode == "major" ? [0, 3, 5, 7, 10] : [0, 2, 4, 7, 9]
+  let theScale = [];
+  for (const idx of pentaindices) {
+    theScale.push(keyNotes[idx]);
   }
-  return newArray;
+  
+  return theScale;
 }
 
 function playRandom() {
