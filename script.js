@@ -68,7 +68,7 @@ function derivePentatonicScale(rootNote, mode) {
     keyNotes.push(...notes.slice(0, i));
   }
 
-  let pentaindices = mode == "major" ? [0, 3, 5, 7, 10] : [0, 2, 4, 7, 9]
+  let pentaindices = (mode == "major" ? [0, 3, 5, 7, 10] : [0, 2, 4, 7, 9]);
   let theScale = [];
   for (const idx of pentaindices) {
     theScale.push(keyNotes[idx]);
