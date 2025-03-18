@@ -36,16 +36,6 @@ function handlePlay() {
   isPlaying = !isPlaying;
 }
 
-function playNote() {
-  // create a synth
-  const synth = new Tone.Synth().toDestination();
-  // play a note from that synth
-  const now = Tone.now();
-  synth.triggerAttackRelease("C4", "8n", now);
-  synth.triggerAttackRelease("E4", "4n", now + 0.5);
-  synth.triggerAttackRelease("G4", "2n", now + 1);
-}
-
 function pleasantHum() {
   //play a note every quarter-note
   const loopA = new Tone.Loop((time) => {
@@ -61,25 +51,47 @@ function pleasantHum() {
   Tone.getTransport().bpm.rampTo(800, 10);
 }
 
+const majorPentatonics = [
+  {
+    rootNote: "B",
+    intervals: ["B4", "C#4", "D#4", "F#4", "G#4"]
+  },
+  {
+    rootNote: "C",
+    intervals: ["A3", "C3", "A4", "C4", "D4", "E4", "G4"]
+  },
+  {
+    rootNote: "F",
+    intervals: ["F3", "G3", "F4", "G4", "A5", "C5", "D5"]
+  }
+]
+
+const minorPentatonics = [
+  {
+    rootNote: "B",
+    intervals: ["B4", "D4", "E4", "F#4", "A5"]
+  },
+  {
+    rootNote: "C",
+    intervals: ["C4", "Eb4", "F4", "G4", "Bb5"]
+  },
+  {
+    rootNote: "F",
+    intervals: ["F3", "Ab4", "Bb4", "C4", "Eb4"]
+  }
+]
+
+const pentatonics = [majorPentatonics, minorPentatonics];
+
 function playRandom() {
   Tone.getTransport().bpm.value = Math.floor(Math.random() * (maxBPM - minBPM + 1)) + minBPM;
 
-  const majorPentatonic_C = ["A3", "C3", "A4", "C4", "D4", "E4", "G4"];
-  const minorPentatonic_C = ["C4", "Eb4", "F4", "G4", "Bb5"];
-
-  const majorPentatonic_F = ["F3", "G3", "F4", "G4", "A5", "C5", "D5"];
-  const minorPentatonic_F = ["F3", "Ab4", "Bb4", "C4", "Eb4"];
-
-  const majorPentatonic_B = ["B4", "C#4", "D#4", "F#4", "G#4"];
-  const minorPentatonic_B = ["B4", "D4", "E4", "F#4", "A5"];
-
-  // const sustains = ["1n", "2n", "4n", "8n", "16n"];
   const longSustains = ["1n", "2n"];
   const mixedSustains = ["1n", "2n", "4n", "8n", "16n", "32n"];
   const shortSustains = ["4n", "16n", "32n"];
 
-  keys = [majorPentatonic_C, minorPentatonic_C, majorPentatonic_F, minorPentatonic_F, majorPentatonic_B, minorPentatonic_B]
-  var p = keys[Math.floor(Math.random() * keys.length)];
+  var t = pentatonics[Math.floor(Math.random() * pentatonics.length)]
+  var p = t[Math.floor(Math.random() * t.length)]
 
   let s;
   switch (Math.floor(Math.random() * 3)) {
@@ -88,12 +100,8 @@ function playRandom() {
     default: s = shortSustains;
   }
 
-  let drone1, drone2;
-  switch (p) {
-    case majorPentatonic_C, minorPentatonic_C: drone1 = "C2"; drone2 = "C4"; break;
-    case majorPentatonic_F, minorPentatonic_F: drone1 = "F2"; drone2 = "F4"; break;
-    default: drone1 = "B2"; drone2 = "B4";
-  }
+  let drone1 = p["rootNote"] + "4";
+  let drone2 = p["rootNote"] + "5";
 
   // play a note every quarter-note
   const loopA = new Tone.Loop((time) => {
@@ -107,7 +115,8 @@ function playRandom() {
   
   // play a random pentatonic within the oscillating drone
   const loopC = new Tone.Loop((time) => {
-    var note = p[Math.floor(Math.random() * p.length)];
+    var intervals = p["intervals"];
+    var note = intervals[Math.floor(Math.random() * intervals.length)];
     var length = s[Math.floor(Math.random() * s.length)];
     // sustains[Math.floor(Math.random() * sustains.length)];
     synthC.triggerAttackRelease(note, length, time);
