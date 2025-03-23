@@ -84,9 +84,9 @@ function playRandom() {
   const mixedSustains = ["1n", "2n", "4n", "8n", "16n", "32n"];
   const shortSustains = ["4n", "16n", "32n"];
 
-  // var p = pentatonics[Math.floor(Math.random() * pentatonics.length)]
   var rootNote = notes[Math.floor(Math.random() * notes.length)];
-  var intervals = derivePentatonicScale(rootNote, "major");
+  let majorOrMinor = Math.floor(Math.random() * 2) > 0 ? "major" : "minor";
+  var intervals = derivePentatonicScale(rootNote, majorOrMinor);
 
   let s;
   switch (Math.floor(Math.random() * 3)) {
