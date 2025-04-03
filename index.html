@@ -2,6 +2,7 @@
 <head>
     <title>Michael Beaver: now in digital form</title>
     <link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+    <!-- <script src="weather-data.js"></script> -->
     <script src="script.js"></script>
     <!-- <script src="https://unpkg.com/tone"></script> -->
     <script src="tone-js-15.0.4.js"></script>
@@ -27,6 +28,16 @@
         <span class="info">mbeaver at gmail dot com</span>
     </div>
     <p class="version">v0.3, mid-march 2025</p>
+    <p class="weather"><div id="weather_info"/></p>
 </div>
 </body>
-</html>
+
+<!-- <script type="text/javascript">
+    (function() {
+        let elem = document.getElementById("weather_info");
+        let timeIdx = weather_feed.hourly.time.indexOf("2025-03-28T17:00");
+        // elem.innerHTML = weather_feed.hourly.time[0];
+        elem.innerHTML = "the temperature in raleigh is " + weather_feed.current.temperature_2m + "° with " + weather_feed.current.relative_humidity_2m + "% humidity.";
+    })();
+</script>
+</html> -->
