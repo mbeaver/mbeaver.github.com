@@ -34,7 +34,8 @@ function handlePlay() {
     document.getElementById("play").setAttribute("title", "ouch my ears are bleeding please stop");
     Tone.getTransport().bpm.value = defaultBPM;
     // Math.floor(Math.random() * 2) > 0 ? playRandom() : pleasantHum();
-    playRandom();
+    // playRandom();
+    maybeMelody();
   }
   isPlaying = !isPlaying;
 }
@@ -111,6 +112,53 @@ function playRandom() {
   // play a random pentatonic within the oscillating drone
   const loopC = new Tone.Loop((time) => {
     var note = intervals[Math.floor(Math.random() * intervals.length)];
+    note = note + ["3", "4", "5"].at(Math.random() * 3);
+    var length = s[Math.floor(Math.random() * s.length)];
+    synthC.triggerAttackRelease(note, length, time);
+  }, "4n").start(Math.floor(Math.random() * 4));
+
+  // all loops start when the Transport is started
+  Tone.getTransport().start();
+}
+
+let polySynth;
+function maybeMelody() {
+  polySynth = new Tone.PolySynth(Tone.Synth).toDestination();
+  const now = Tone.now();
+
+  var rootNote = notes[Math.floor(Math.random() * notes.length)];
+  let majorOrMinor = Math.floor(Math.random() * 2) > 0 ? "major" : "minor";
+  let scale = derivePentatonicScale(rootNote, majorOrMinor);
+
+  const loopA = new Tone.Loop((time) => {
+    polySynth.triggerAttackRelease(scale[0] + "3", "8n", time);
+    polySynth.triggerAttackRelease(scale[4] + "4", "8n", time + 0.1);
+    polySynth.triggerAttackRelease(scale[3] + "4", "8n", time + 0.2);
+
+    polySynth.triggerAttackRelease(scale[1] + "3", "4n", time + 0.3);
+    polySynth.triggerAttackRelease(scale[1] + "3", "4n", time + 0.4);
+    polySynth.triggerAttackRelease(scale[1] + "3", "4n", time + 0.5);
+    polySynth.triggerAttackRelease(scale[1] + "3", "4n", time + 0.6);
+
+    polySynth.triggerAttackRelease(scale[2] + "3", "4n", time + 0.7);
+    polySynth.triggerAttackRelease(scale[2] + "3", "4n", time + 0.8);
+  }, "1n").start(0);
+
+  const longSustains = ["1n", "2n"];
+  const mixedSustains = ["1n", "2n", "4n", "8n", "16n", "32n"];
+  const shortSustains = ["4n", "16n", "32n"];
+
+  let s;
+  // switch (Math.floor(Math.random() * 3)) {
+  //   case 0: s = longSustains; break;
+  //   case 1: s = mixedSustains; break;
+  //   default: s = shortSustains;
+  // }
+  s = mixedSustains;
+
+  // play a random pentatonic within the base loop
+  const loopC = new Tone.Loop((time) => {
+    var note = scale[Math.floor(Math.random() * scale.length)];
     note = note + ["3", "4", "5"].at(Math.random() * 3);
     var length = s[Math.floor(Math.random() * s.length)];
     synthC.triggerAttackRelease(note, length, time);
