@@ -3,13 +3,15 @@ let masterVolume = -9; // in decibel.
 let tempValueElem;
 let windValueElem;
 let rainValueElem;
-let cloudValueElem;
+// let cloudValueElem;
 let playBtn;
 
 let tempOsc;
-let windOsc;
+// let windOsc;
 let rainOsc;
-let cloudOsc;
+// let cloudOsc;
+
+let windLFO;
 
 let wave;
 let waveCanvas;
@@ -23,7 +25,7 @@ function setup() {
 	tempValueElem = document.getElementById("tempvalue");
 	windValueElem = document.getElementById("windvalue");
 	rainValueElem = document.getElementById("rainvalue");
-	cloudValueElem = document.getElementById("cloudvalue");
+	// cloudValueElem = document.getElementById("cloudvalue");
 
 	// 4 differents types: sine (default), square, triangle and sawtooth
   	tempOsc = new Tone.Oscillator({
@@ -33,12 +35,15 @@ function setup() {
   	});
   	tempOsc.toDestination();
 
-  	windOsc = new Tone.Oscillator({
-    	type: "square",
-    	frequency: 220,
-    	volume: -3
-  	});
-  	windOsc.toDestination();
+  	// windOsc = new Tone.Oscillator({
+    // 	type: "square",
+    // 	frequency: 220,
+    // 	volume: -3
+  	// });
+  	// windOsc.toDestination();
+
+  	// windLFO = new Tone.LFO("0.1hz", 210, 230);
+  	// windLFO.connect(windOsc.frequency);
 
   	rainOsc = new Tone.Oscillator({
     	type: "triangle",
@@ -47,12 +52,12 @@ function setup() {
   	});
   	rainOsc.toDestination();
 
- 	cloudOsc = new Tone.Oscillator({
-    	type: "sawtooth",
-    	frequency: 220,
-    	volume: -3
-  	});
-  	cloudOsc.toDestination(); 	
+ 	// cloudOsc = new Tone.Oscillator({
+    // 	type: "sawtooth",
+    // 	frequency: 220,
+    // 	volume: -3
+  	// });
+  	// cloudOsc.toDestination(); 	
 
   	wave = new Tone.Waveform();
   	Tone.Master.connect(wave);
@@ -66,34 +71,47 @@ function handlePlay() {
 			waveCanvas = createCanvas(800, 200);
   			waveCanvas.parent("canvas");
   		}
+		
 		let temp = tempValueElem.value;
-		tempOsc.frequency.value = map(temp, -20, 120, 110, 880);
+		let wind = windValueElem.value;
+		let rain = rainValueElem.value;
+		// let cloud = cloudValueElem.value;
+
+		let tempOscFreq;
+		if (temp <= 50) {
+			tempOscFreq = map(rain, 0, 100, 110, 440);
+		} else if (temp <= 72) {
+			tempOscFreq = map(rain, 0, 100, 330, 550);
+		} else if (temp <= 95) {
+			tempOscFreq = map(rain, 0, 100, 440, 770);
+		} else {
+			tempOscFreq = map(rain, 0, 100, 660, 880);
+		}
+		console.log(tempOscFreq);
+		tempOsc.frequency.value = tempOscFreq;
 		tempOsc.start();
 
-		let wind = windValueElem.value;
-		windOsc.frequency.value = map(wind, 0, 120, 110, 880);
-		windOsc.start();
+		windLFOFreq = map(wind, 0, 100, 0.1, 0.8);
+		windLFO = new Tone.LFO(windLFOFreq + "hz", tempOscFreq - 10, tempOscFreq + 10);
+  		windLFO.connect(tempOsc.frequency);
+  		windLFO.start();
 
-		let rain = rainValueElem.value;
 		rainOsc.frequency.value = map(rain, 0, 100, 110, 880);
 		rainOsc.start();
 
-		let cloud = cloudValueElem.value;
-		cloudOsc.frequency.value = map(cloud, 0, 100, 110, 880);
-		cloudOsc.start();
-    	
-    	// osc.start();
-    	// osc2.start();
-    	// lfo.start();
+		// cloudOsc.frequency.value = map(cloud, 0, 100, 110, 880);
+		// cloudOsc.start();
 
     	ready = true;
   	}
   	else {
     	ready = false;
     	tempOsc.stop();
-    	windOsc.stop();
+    	// windOsc.stop();
+    	windLFO.disconnect();
+    	windLFO.stop();
     	rainOsc.stop();
-    	cloudOsc.stop();
+    	// cloudOsc.stop();
   	}
 	
 }
