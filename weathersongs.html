@@ -1,0 +1,55 @@
+<html>
+<head>
+    <title>Weather Reports: now in audio form</title>
+    <!-- <link rel="stylesheet" type="text/css" href="style.css" media="screen" /> -->
+    <!-- <script src="weather-data.js"></script> -->
+    <script src="weathersongs.js"></script>
+    <!-- <script src="https://unpkg.com/tone"></script> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.1.9/p5.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.7/dat.gui.min.js"></script>
+    <script src="tone-js-15.0.4.js"></script>
+</head>
+<style type="text/css">
+	div {
+		padding: 20px;
+		margin: 10px;
+		font-weight: bold;
+		font-size: 1.4em;
+	}
+	#temperature {
+		background-color: green;
+	}
+	#wind {
+		background-color: red;
+	}
+	#rain {
+		background-color: yellow;
+	}
+	#clouds {
+		background-color: blue;
+	}
+	#play {
+		display: block;
+		margin: auto;
+		padding: 10px;
+		font-size: 1.1em;
+	}
+	#canvas {
+		/*width: 100%;
+		height: 400px;
+/*		margin: auto;*/*/
+	}
+</style>
+<body>
+    <!-- <button onclick="setup()">play it</button> -->
+    <div id="temperature">temp (-20 to 120) <input type="text" id="tempvalue"></input></div>
+    <div id="wind">wind (0 to 120)<input type="text" id="windvalue"></input></div>
+    <div id="rain">rain (0 to 100)<input type="text" id="rainvalue"></input></div>
+    <div id="clouds">clouds (0 to 100)<input type="text" id="cloudvalue"></input></div>
+    <div>
+    	<button id="play">start/stop sounds</button>
+    </div>
+    <div id="canvas"></div>
+</body>
+<script type="text/javascript">setup();</script>
+</html>
