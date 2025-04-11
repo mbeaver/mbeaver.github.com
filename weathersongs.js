@@ -1,4 +1,4 @@
-let masterVolume = -9; // in decibel.
+let masterVolume = -15; // in decibel.
 
 let tempValueElem;
 let windValueElem;
@@ -45,11 +45,13 @@ function setup() {
   	// windLFO = new Tone.LFO("0.1hz", 210, 230);
   	// windLFO.connect(windOsc.frequency);
 
-  	rainOsc = new Tone.Oscillator({
-    	type: "triangle",
-    	frequency: 220,
-    	volume: -3
-  	});
+  	// rainOsc = new Tone.Oscillator({
+    // 	type: "triangle",
+    // 	frequency: 220,
+    // 	volume: -3
+  	// });
+  	// rainOsc = new Tone.PulseOscillator(50, 0.4);
+  	rainOsc = new Tone.Noise("white");
   	rainOsc.toDestination();
 
  	// cloudOsc = new Tone.Oscillator({
@@ -78,25 +80,40 @@ function handlePlay() {
 		// let cloud = cloudValueElem.value;
 
 		let tempOscFreq;
-		if (temp <= 50) {
-			tempOscFreq = map(rain, 0, 100, 110, 440);
-		} else if (temp <= 72) {
-			tempOscFreq = map(rain, 0, 100, 330, 550);
-		} else if (temp <= 95) {
-			tempOscFreq = map(rain, 0, 100, 440, 770);
+		let tempOscType;
+		if (temp <= 0) {
+			tempOscFreq = map(temp, -20, 0, 55, 110);
+			tempOscType = "square"
+		} else if (temp <= 45) {
+			tempOscFreq = map(temp, 1, 45, 110, 220);
+			tempOscType = "triangle"
+		} else if (temp <= 90) {
+			tempOscFreq = map(temp, 46, 90, 220, 330);
+			tempOscType = "sine"
 		} else {
-			tempOscFreq = map(rain, 0, 100, 660, 880);
+			tempOscFreq = map(temp, 91, 120, 330, 440);
+			tempOscType = "sawtooth"
 		}
 		console.log(tempOscFreq);
 		tempOsc.frequency.value = tempOscFreq;
+		tempOsc.type = tempOscType;
 		tempOsc.start();
 
-		windLFOFreq = map(wind, 0, 100, 0.1, 0.8);
+		windLFOFreq = map(wind, 0, 100, 0.1, 0.5);
 		windLFO = new Tone.LFO(windLFOFreq + "hz", tempOscFreq - 10, tempOscFreq + 10);
   		windLFO.connect(tempOsc.frequency);
   		windLFO.start();
 
-		rainOsc.frequency.value = map(rain, 0, 100, 110, 880);
+  		if (rain <= 33) {
+  			rainOsc.type = "brown";
+  			rainOsc.volume.value = map(rain, 0, 33, -15, -10);
+  		} else if (rain <= 66) {
+  			rainOsc.type = "pink";
+  			rainOsc.volume.value = map(rain, 34, 66, -9, -5);
+  		} else {
+  			rainOsc.type = "white";
+  			rainOsc.volume.value = map(rain, 67, 100, -4, 0);
+  		}
 		rainOsc.start();
 
 		// cloudOsc.frequency.value = map(cloud, 0, 100, 110, 880);
