@@ -16,6 +16,12 @@
 		font-weight: bold;
 		font-size: 1.4em;
 	}
+	#period {
+		background-color: orange;
+	}
+	#keyMode {
+		background-color: palegreen;
+	}
 	#temperature {
 		background-color: green;
 	}
@@ -41,25 +47,34 @@
 </style>
 <body>
     <!-- <button onclick="setup()">play it</button> -->
+    <div id="period">
+    	update me for progressive period information
+    </div>
+    <div id="keyMode">
+    	update me for progressive keyMode information
+    </div>
     <div id="temperature">
-    	temp in F (-20 to 120)
+    	update me for progressive temperature
     	<!-- <input type="text" id="tempvalue"></input> -->
-    	<input type="range" min="-20" max="120" value="72" class="slider" id="tempvalue">
+    	<!-- <input type="range" min="-20" max="120" value="72" class="slider" id="tempvalue"> -->
     </div>
 
     <div id="wind">
-    	wind in mph (0 to 100)
+    	update me for progressive wind speeds/gusts
     	<!-- <input type="text" id="windvalue"></input> -->
-    	<input type="range" min="0" max="100" value="5" class="slider" id="windvalue">
+    	<!-- <input type="range" min="0" max="100" value="5" class="slider" id="windvalue"> -->
     </div>
     <div id="rain">
-    	rain chances in % (0 to 100)
+    	update me for progressive rain chances
     	<!-- <input type="text" id="rainvalue"></input> -->
-    	<input type="range" min="0" max="100" value="5" class="slider" id="rainvalue">
+    	<!-- <input type="range" min="0" max="100" value="5" class="slider" id="rainvalue"> -->
     </div>
-    <!-- <div id="clouds">cloud cover in % (0 to 100)<input type="text" id="cloudvalue"></input></div> -->
+    <div id="clouds">
+    	update me for progressive cloud cover
+    	<!-- <input type="text" id="cloudvalue"></input> -->
+	</div>
     <div>
-    	<button id="play">start/stop sounds</button>
+    	<button id="play">start/stop 7 day forecast</button>
     </div>
     <div id="canvas"></div>
 </body>
