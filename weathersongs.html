@@ -10,29 +10,15 @@
     <script src="weathersongs.js"></script>
 </head>
 <style type="text/css">
+	body {
+		background-color: #67686b;
+		background-image: repeating-linear-gradient(-45deg, rgba(47, 54, 152, 0.1), rgba(47, 54, 152, 0.1) 1px, transparent 1px, transparent 6px);
+	}
 	div {
 		padding: 20px;
 		margin: 10px;
 		font-weight: bold;
 		font-size: 1.4em;
-	}
-	#period {
-		background-color: orange;
-	}
-	#keyMode {
-		background-color: palegreen;
-	}
-	#temperature {
-		background-color: green;
-	}
-	#wind {
-		background-color: red;
-	}
-	#rain {
-		background-color: yellow;
-	}
-	#clouds {
-		background-color: blue;
 	}
 	#play {
 		display: block;
@@ -46,33 +32,6 @@
 	}
 </style>
 <body>
-    <!-- <button onclick="setup()">play it</button> -->
-    <div id="period">
-    	update me for progressive period information
-    </div>
-    <div id="keyMode">
-    	update me for progressive keyMode information
-    </div>
-    <div id="temperature">
-    	update me for progressive temperature
-    	<!-- <input type="text" id="tempvalue"></input> -->
-    	<!-- <input type="range" min="-20" max="120" value="72" class="slider" id="tempvalue"> -->
-    </div>
-
-    <div id="wind">
-    	update me for progressive wind speeds/gusts
-    	<!-- <input type="text" id="windvalue"></input> -->
-    	<!-- <input type="range" min="0" max="100" value="5" class="slider" id="windvalue"> -->
-    </div>
-    <div id="rain">
-    	update me for progressive rain chances
-    	<!-- <input type="text" id="rainvalue"></input> -->
-    	<!-- <input type="range" min="0" max="100" value="5" class="slider" id="rainvalue"> -->
-    </div>
-    <div id="clouds">
-    	update me for progressive cloud cover
-    	<!-- <input type="text" id="cloudvalue"></input> -->
-	</div>
     <div>
     	<button id="play">start/stop 7 day forecast</button>
     </div>
