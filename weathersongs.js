@@ -35,6 +35,8 @@ const MAX_TEMP = 120;
 let ready = false;
 
 function setup() {
+	fetchWeatherFeed();
+
 	playBtn = document.getElementById("play");
 	playBtn.addEventListener("click", handlePlay);
 
@@ -81,8 +83,24 @@ function setup() {
   	Tone.Master.volume.value = masterVolume;
 }
 
+let weather_feed;
+async function fetchWeatherFeed() {
+	const url = "https://api.open-meteo.com/v1/forecast?latitude=35.7721&longitude=-78.6386&hourly=temperature_2m,relative_humidity_2m,dew_point_2m,precipitation_probability,precipitation,cloud_cover,visibility,wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=mph&temperature_unit=fahrenheit&precipitation_unit=inch";
+	try {
+		const response = await fetch(url);
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
 
-let weather_feed = {
+		const json = await response.json();
+		weather_feed = json;
+	} catch (error) {
+		console.log(error.message);
+	}
+}
+
+
+let weather_feedOLD = {
 	// "temperature_2m": [57.7, 53.1, 50.2, 48, 47.2, 48.1, 50.5, 50.6, 50.7, 50.6, 49.8, 50.3, 51.6, 56.4, 60.1, 64.3, 69.7, 72.5, 75.8, 76.7, 77.3, 77.3, 76.4, 72.6, 68.5, 66.3, 65, 64.1, 63.8, 63.2, 62.4, 61.4, 60.9, 60.3, 59.6, 58.9, 60, 63.6, 66.3, 69.5, 72.8, 75.1, 76.5, 77.7, 78.3, 77.7, 76.6, 74, 70.5, 68.3, 67, 65.9, 64.9, 64.1, 63, 62.6, 61, 59.6, 59.4, 58.9, 60.3, 63.5, 66.8, 69.5, 72.4, 75.3, 76, 72.8, 74.2, 73.7, 72.6, 70.1, 67.2, 66.1, 65.1, 64.3, 64, 63.3, 62.9, 62.7, 62.7, 62.5, 62.7, 63.6, 64.7, 67.2, 70.1, 73.3, 75.7, 76.8, 75.9, 74.8, 75.1, 74.8, 73.3, 70.3, 69.2, 68.8, 66.9, 66, 64.7, 64, 62.7, 61.5, 59.5, 58.4, 57.5, 56.6, 54.1, 53, 52.3, 51.7, 51.2, 51.7, 51.2, 51, 52.1, 54.1, 52.1, 51.4, 49.6, 48.5, 47.4, 46.5, 45.6, 44.9, 44.5, 44, 43.5, 43.5, 43.3, 43.3, 43.8, 46.3, 49.7, 53, 56, 58.8, 61.1, 63, 64.4, 64.9, 64, 62.1, 60.4, 59, 57.8, 56.8, 56.2, 55.9, 55.7, 55.4, 55.3, 55.3, 55.9, 56.8, 58, 59.7, 61.6, 64.2, 68.1, 72.6, 75.7, 76.2, 75.3, 74.2, 73.5, 72.6],
 	"temperature_2m":[77.6,75.8,73.3,73.0,70.0,69.7,68.4,67.0,66.5,65.2,63.5,63.1,64.9,67.7,70.8,74.0,77.3,78.7,80.5,81.2,82.3,82.7,81.8,79.7,76.1,73.1,71.3,70.2,68.5,67.4,66.6,66.4,65.9,65.1,64.4,63.9,66.9,70.4,74.4,77.9,80.7,81.0,70.4,70.4,71.2,69.2,69.5,69.1,68.0,67.2,66.5,65.3,64.6,64.0,64.6,65.0,64.7,64.0,63.5,63.8,65.5,67.9,70.9,72.8,74.0,74.3,76.9,77.8,76.6,75.3,72.1,70.8,70.1,69.4,66.9,64.7,63.1,61.8,60.6,59.5,58.6,57.9,57.3,57.0,59.3,62.4,66.3,70.1,73.5,75.1,76.6,78.4,78.9,78.7,78.0,76.0,71.9,69.2,67.8,66.7,65.4,64.3,63.8,63.8,64.2,64.2,63.3,63.1,64.7,64.7,65.6,65.4,67.4,69.0,71.5,77.7,79.6,76.6,74.6,72.4,69.4,67.8,66.9,66.7,66.0,65.1,64.5,64.2,63.8,63.4,63.1,63.1,64.9,68.2,72.7,76.8,80.4,83.4,84.5,82.2,77.8,73.9,71.4,69.3,67.9,67.5,67.7,67.6,66.8,65.7,64.7,63.7,62.8,62.2,61.9,61.9,62.4,63.5,65.2,67.0,69.3,71.6,73.2,73.5,73.1,71.9,69.9,67.3],
 	"relative_humidity_2m": [33, 42, 46, 52, 52, 54, 45, 53, 62, 60, 66, 68, 70, 60, 58, 50, 40, 36, 31, 34, 26, 28, 30, 37, 44, 49, 64, 71, 78, 80, 80, 84, 87, 88, 88, 90, 89, 82, 75, 65, 55, 50, 46, 43, 41, 40, 40, 44, 49, 55, 61, 65, 69, 71, 75, 78, 81, 86, 88, 90, 90, 83, 77, 70, 63, 54, 51, 59, 53, 55, 57, 64, 75, 81, 86, 87, 84, 84, 85, 87, 90, 94, 96, 95, 92, 85, 77, 68, 63, 63, 67, 70, 69, 69, 71, 80, 82, 80, 87, 90, 92, 92, 88, 82, 80, 78, 77, 79, 76, 73, 70, 69, 69, 65, 60, 55, 49, 43, 46, 48, 51, 52, 54, 56, 58, 58, 59, 61, 62, 61, 61, 63, 65, 62, 56, 51, 46, 41, 38, 37, 38, 40, 44, 50, 56, 63, 71, 77, 81, 84, 86, 88, 90, 91, 91, 89, 88, 87, 86, 84, 78, 70, 65, 65, 69, 72, 74, 77],
@@ -101,17 +119,17 @@ let weather_feed = {
 	1 measure = 4 hours of audible weather data, 6 measures per day, 42 measures for a week.
 */
 function play7dayForecast() {
-	let temperature_series = weather_feed["temperature_2m"];
+	let temperature_series = weather_feed["hourly"]["temperature_2m"];
 	let minTemperature = Math.round(Math.min(...temperature_series));
 	let maxTemperature = Math.round(Math.max(...temperature_series));
 
-	let precipitation_series = weather_feed["precipitation_probability"];
+	let precipitation_series = weather_feed["hourly"]["precipitation_probability"];
 
-	let wind_series = weather_feed["wind_speed_10m"];
+	let wind_series = weather_feed["hourly"]["wind_speed_10m"];
 	let minWind = Math.round(Math.min(...wind_series));
 	let maxWind = Math.round(Math.max(...wind_series));
 
-	let wind_gusts_series = weather_feed["wind_gusts_10m"];
+	let wind_gusts_series = weather_feed["hourly"]["wind_gusts_10m"];
 
 // improve this
 	let keyIdx = Math.round(map((minTemperature + maxTemperature)/2, MIN_TEMP, MAX_TEMP, 0, notes.length - 1));
@@ -119,8 +137,8 @@ function play7dayForecast() {
 	let keyFourth = fourthForKey(key);
 	let keyFifth = fifthForKey(key);
 
-	let dew_point_series = weather_feed["dew_point_2m"];
-	let cloud_cover_series = weather_feed["cloud_cover"];
+	let dew_point_series = weather_feed["hourly"]["dew_point_2m"];
+	let cloud_cover_series = weather_feed["hourly"]["cloud_cover"];
 
 	const autoWah = new Tone.AutoWah(50, 6, -20).toDestination();
 	const crusher = new Tone.BitCrusher(4).toDestination();
@@ -229,7 +247,8 @@ function play7dayForecast() {
 		// 	cloudElem.innerHTML = "periodAvgCloud = " + periodAvgCloud;
 		// }, time);
 
-		periodForDisplay = "current period = now + " + loopCount + " hours";
+		// periodForDisplay = "current period = now + " + loopCount + " hours";
+		periodForDisplay = weather_feed["hourly"]["time"][loopCount];
 		keyModeForDisplay = "current key = " + key + " " + mode + ", bpm = " + bpm;
 		tempForDisplay = "average temperature = " + periodAvgTemp + " (min/max:  " + periodMinTemp + "/" + periodMaxTemp + ")";
 		windForDisplay = "average wind = " + periodAvgWind + " (gusts = " + periodAvgGusts + ", computed gust factor = " + gustFactor + ")";
