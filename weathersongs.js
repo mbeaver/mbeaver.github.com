@@ -1,12 +1,13 @@
 let masterVolume = -15; // in decibel.
 
-let periodElem;
-let keyModeElem;
-let tempElem;
-let windElem;
-let rainElem;
-let cloudElem;
 let playBtn;
+
+let periodForDisplay;
+let tempForDisplay;
+let keyModeForDisplay;
+let windForDisplay;
+let rainForDisplay;
+let cloudForDisplay;
 
 let minBPM = 72;
 let maxBPM = 144;
@@ -34,13 +35,6 @@ const MAX_TEMP = 120;
 let ready = false;
 
 function setup() {
-	periodElem = document.getElementById("period");
-	keyModeElem = document.getElementById("keyMode");
-	tempElem = document.getElementById("temperature");
-	windElem = document.getElementById("wind");
-	rainElem = document.getElementById("rain");
-	cloudElem = document.getElementById("clouds");
-
 	playBtn = document.getElementById("play");
 	playBtn.addEventListener("click", handlePlay);
 
@@ -226,14 +220,21 @@ function play7dayForecast() {
 			synth.triggerAttackRelease(note, length, time + timeOffset);
 		}
 
-		Tone.Draw.schedule(() => {
-			periodElem.innerHTML = "current period = " + loopCount;
-			keyModeElem.innerHTML = "current key = " + key + ", mode = " + mode;
-			tempElem.innerHTML = "periodAvgTemp = " + periodAvgTemp + ", periodMinTemp = " + periodMinTemp + ", periodMaxTemp = " + periodMaxTemp;
-			windElem.innerHTML = "periodAvgWind = " + periodAvgWind + ", periodAvgGusts = " + periodAvgGusts + ", gustFactor = " + gustFactor;
-			rainElem.innerHTML = "periodAvgPrecip = " + periodAvgPrecip + ", periodAvgDew = " + periodAvgDew;
-			cloudElem.innerHTML = "periodAvgCloud = " + periodAvgCloud;
-		}, time);
+		// Tone.Draw.schedule(() => {
+		// 	periodElem.innerHTML = "current period = " + loopCount;
+		// 	keyModeElem.innerHTML = "current key = " + key + ", mode = " + mode;
+		// 	tempElem.innerHTML = "periodAvgTemp = " + periodAvgTemp + ", periodMinTemp = " + periodMinTemp + ", periodMaxTemp = " + periodMaxTemp;
+		// 	windElem.innerHTML = "periodAvgWind = " + periodAvgWind + ", periodAvgGusts = " + periodAvgGusts + ", gustFactor = " + gustFactor;
+		// 	rainElem.innerHTML = "periodAvgPrecip = " + periodAvgPrecip + ", periodAvgDew = " + periodAvgDew;
+		// 	cloudElem.innerHTML = "periodAvgCloud = " + periodAvgCloud;
+		// }, time);
+
+		periodForDisplay = "current period = now + " + loopCount + " hours";
+		keyModeForDisplay = "current key = " + key + " " + mode + ", bpm = " + bpm;
+		tempForDisplay = "average temperature = " + periodAvgTemp + " (min/max:  " + periodMinTemp + "/" + periodMaxTemp + ")";
+		windForDisplay = "average wind = " + periodAvgWind + " (gusts = " + periodAvgGusts + ", computed gust factor = " + gustFactor + ")";
+		rainForDisplay = "average rain chances = " + periodAvgPrecip + ", average dew point = " + periodAvgDew;;
+		cloudForDisplay = "average cloud cover = " + periodAvgCloud;;
 
 		prevAvgTemp = periodAvgTemp;
 		prevAvgWind = periodAvgWind;
@@ -488,6 +489,21 @@ function draw() {
 	      	let y2 = map(buffer[i], -1, 1, 0, height);
 	      	line(x1, y1, x2, y2);
 	    }
+
+	    textSize(20)
+	    fill("yellow")
+	    text(periodForDisplay, 50, 50);
+	    fill("orange")
+	    text(keyModeForDisplay, 50, 100);
+	    fill("red")
+		text(tempForDisplay, 50, 150);
+		fill("purple")
+		text(windForDisplay, 50, 200);
+		fill("blue")
+		text(rainForDisplay, 50, 250);
+		fill("green")
+		text(cloudForDisplay, 50, 300);
+
 	} else {
 		fill(255);
     	noStroke();
