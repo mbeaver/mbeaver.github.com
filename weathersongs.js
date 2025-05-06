@@ -1,4 +1,4 @@
-let masterVolume = -15; // in decibel.
+let masterVolume = -10; // in decibel.
 
 let playBtn;
 
@@ -159,7 +159,65 @@ function play7dayForecast() {
 	const pingPong = new Tone.PingPongDelay("4n", 0.2).toDestination();
 	const tremolo = new Tone.Tremolo(9, 0.75).toDestination().start();
 
-	const synth = new Tone.PolySynth(Tone.Synth).chain(autoWah, chorus, reverb);
+	// const droneSynth = new Tone.PolySynth(Tone.Synth).chain(chorus, reverb);
+	const droneSynth = new Tone.PolySynth(Tone.DuoSynth).toDestination();
+	droneSynth.vibratoAmount = 0.5;
+	droneSynth.vibratoRate = 5;
+	droneSynth.portamento = 0.1;
+	droneSynth.harmonicity = 1.005;
+	// 	// volume: 5,
+	droneSynth.blueprint.voice0.oscillator.type = "sawtooth";
+	// 		},
+	// 		filter: {
+	// 			Q: 1,
+	// 			type: "lowpass",
+	// 			rolloff: -24
+	// 		},
+	// 		envelope: {
+	// 			attack: 0.01,
+	// 			decay: 0.25,
+	// 			sustain: 0.4,
+	// 			release: 1.2
+	// 		},
+	// 		filterEnvelope: {
+	// 			attack: 0.001,
+	// 			decay: 0.05,
+	// 			sustain: 0.3,
+	// 			release: 2,
+	// 			baseFrequency: 100,
+	// 			octaves: 4
+	// 		}
+	// 	},
+	// 	voice1: {
+	// 		oscillator: {
+	// 			type: "sawtooth"
+	// 		},
+	// 		filter: {
+	// 			Q: 2,
+	// 			type: "bandpass",
+	// 			rolloff: -12
+	// 		},
+	// 		envelope: {
+	// 			attack: 0.25,
+	// 			decay: 4,
+	// 			sustain: 0.1,
+	// 			release: 0.8
+	// 		},
+	// 		filterEnvelope: {
+	// 			attack: 0.05,
+	// 			decay: 0.05,
+	// 			sustain: 0.7,
+	// 			release: 2,
+	// 			baseFrequency: 5000,
+	// 			octaves: -1.5
+	// 		}
+	// 	}
+	// })).toDestination();
+
+
+	// const bounceSynth = new Tone.PolySynth(Tone.Synth).chain(crusher, shift, phaser, pingPong, tremolo);
+	const bounceSynth = new Tone.PolySynth(Tone.Synth).chain(autoWah);
+	// bounceSynth.volume.value = masterVolume + 3;
 
 	let loopCount = 0;
 	let prevAvgTemp;
@@ -222,7 +280,7 @@ function play7dayForecast() {
 			let position = Math.round(random(2, 4));
 			let length = longSustains[Math.round(random(0, longSustains.length - 1))];
 			let timeOffset = random(0, 0.8)
-			synth.triggerAttackRelease(chordNotes[i] + position, length, time + timeOffset);
+			droneSynth.triggerAttackRelease(chordNotes[i] + position, length, time + timeOffset);
 		}
 
 		// bounce up/down/within the derived scale using sustains based on gusts
@@ -235,7 +293,7 @@ function play7dayForecast() {
 			note = note + ["2", "3", "4"].at(Math.random() * 3);
 			var length = sustains[Math.floor(Math.random() * sustains.length)];
 			let timeOffset = i + random(0, 1);
-			synth.triggerAttackRelease(note, length, time + timeOffset);
+			bounceSynth.triggerAttackRelease(note, length, time + timeOffset);
 		}
 
 		// Tone.Draw.schedule(() => {
@@ -354,6 +412,121 @@ function play7dayForecast() {
 // 	return derivedPatterns;
 // }
 
+const AVAILABLE_PATTERNS = [
+	
+	[
+		{scaleIdx: 4, position: 3, duration: "4n", timeOffset: "+0:0"},			// 1
+		{scaleIdx: 3, position: 3, duration: "4n", timeOffset: "+0:1"},			// 2
+		{scaleIdx: 2, position: 3, duration: "4n", timeOffset: "+0:2"},         // 3
+		{scaleIdx: 0, position: 3, duration: "4n", timeOffset: "+0:3"},			// 4
+	],
+	// this is really good and breezy sounding in major at ~ 100bpm. at 72bpm it is empty at the end. maybe look at tweaking the time offset numbers.
+	// and in minor it's still fluffy but a bit melancholy at 72bpm but more upbeat at 100bpm of course. 
+	[
+		{scaleIdx: 0, position: 3, duration: "4n", timeOffset: "+0:0"},			// 1
+		{scaleIdx: 4, position: 3, duration: "4n", timeOffset: "+0:1"},			// 2
+		
+		{scaleIdx: 3, position: 3, duration: "16n", timeOffset: "+0:2:0"}, 		// 3
+		{scaleIdx: 3, position: 3, duration: "16n", timeOffset: "+0:2:1"},		// e
+		{scaleIdx: 3, position: 3, duration: "16n", timeOffset: "+0:2:2"}, 		// and
+																				// uh
+		{scaleIdx: 3, position: 3, duration: "8n", timeOffset: "+0:3:0"}, 		// 4
+		{scaleIdx: 2, position: 3, duration: "8n", timeOffset: "+0:3:2"},		// and
+	], [
+		{scaleIdx: 2, position: 3, duration: "8n", timeOffset: "+0:0:0"},			// 1
+		{scaleIdx: 4, position: 3, duration: "8n", timeOffset: "+0:0:1"},			// e
+		{scaleIdx: 3, position: 3, duration: "8n", timeOffset: "+0:0:2"},			// and
+		{scaleIdx: 1, position: 3, duration: "8n", timeOffset: "+0:0:3"},			// uh
+
+		{scaleIdx: 0, position: 3, duration: "4n", timeOffset: "+0:1"},			// 2
+		
+		{scaleIdx: 3, position: 3, duration: "16n", timeOffset: "+0:2:0"}, 		// 3
+		{scaleIdx: 3, position: 3, duration: "16n", timeOffset: "+0:2:3"}, 		// uh
+
+		{scaleIdx: 3, position: 3, duration: "16n", timeOffset: "+0:3:0"}, 		// 4
+		{scaleIdx: 2, position: 3, duration: "16n", timeOffset: "+0:3:3"},		// uh
+	]
+]
+function playForConditions(temps, rains, clouds, winds) {
+	// cold weather should be quick, sharp sounds with a crisp tone
+	// mid weather should be slower with a mix of short/mid/long sustains that is treated like a spectrum
+	// hot weather should be slow, long sounds with a warm tone
+
+	// console.log("temp = " + temp);
+	let patterns = []
+	
+	let goodWeatherKeys = ["A", "C", "D", "E", "F", "G"];
+	let badWeatherKeys = ["A#", "B", "C#", "D#", "F#", "G#"];
+	
+	let numCombos = 0;
+	let key;
+	let mode;
+	let scale;
+
+temps = [85, 87, 87, 89];
+winds = [0, 1, 1, 3];
+rains = [0, 1, 1, 1];
+	let periodAvgTemp = Math.ceil((temps.reduce((partialSum, a) => partialSum + a, 0))/4);
+	let periodMinTemp = Math.round(Math.min(...temps));
+	let periodMaxTemp = Math.round(Math.max(...temps));
+	
+	
+	if (false && periodMinTemp <= 0) {
+	} else if (false && periodMinTemp <= 32) {
+	} else {
+		// mode = (rain <= 10 && cloud <= 10) ? "major" : "minor";
+		// key = (rain <= 10 || cloud <= 10) ? goodNotes[Math.floor(random(0, goodNotes.length-1))] : badNotes[Math.floor(random(0, badNotes.length-1))]
+		mode = "minor";
+		key = "C";
+		// numCombos = Math.floor(random(2, 5));
+		numCombos = 1;
+	}
+
+	scale = derivePentatonicScale(key, mode);
+
+	let periodAvgWind = Math.ceil((winds.reduce((partialSum, a) => partialSum + a, 0))/4);
+
+	// let bpm = Math.floor(map(periodAvgWind, 0, 100, minBPM, maxBPM));
+	let bpm = 100;
+	Tone.getTransport().bpm.rampTo(bpm, 0.1);
+
+	let derivedPatterns = [];
+	for (let i = 0; i < numCombos; i++) {
+		let sequence = []
+		// let pattern = AVAILABLE_PATTERNS[Math.floor(Math.random() * AVAILABLE_PATTERNS.length)]
+		let pattern = AVAILABLE_PATTERNS[2];
+		for (const note of pattern) {
+			let noteName = scale[note.scaleIdx] + note.position;
+			let duration = note.duration;
+			let timeOffset = note.timeOffset;
+console.log("noteName = " + noteName + ", duration = " + duration + ", timeOffset = " + timeOffset);
+			sequence.push({
+				note: noteName, duration: duration, timeOffset: timeOffset
+			});
+		}
+		derivedPatterns.push(sequence);
+	}
+console.log(derivedPatterns);
+
+	const bounceSynth = new Tone.PolySynth(Tone.Synth).toDestination();
+
+	const loopA = new Tone.Loop((time) => {
+		for (const pattern of derivedPatterns) {
+			for (const note of pattern) {
+				let noteName = note.note;
+				let duration = note.duration;
+				let timeOffset = note.timeOffset;
+				// bounceSynth.triggerAttackRelease(noteName, duration, time + timeOffset);
+				bounceSynth.triggerAttackRelease(noteName, duration, timeOffset);
+			}
+		}
+
+		// loopCount += 4;
+	}, "1m").start(0);
+
+	// return derivedPatterns;
+}
+
 function startStopWindNoise() {
 	if (!ready) {
 		let wind = windValueElem.value;
@@ -402,7 +575,8 @@ function handlePlay() {
 	  	// startStopWindNoise();
 		// startStopRainNoise();
 
-		play7dayForecast();
+		// play7dayForecast();
+		playForConditions();
 
     	ready = true;
 
