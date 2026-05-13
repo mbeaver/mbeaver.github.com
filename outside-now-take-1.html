@@ -26,16 +26,22 @@
             }
             #info {
                 position: fixed;
-                bottom: max(14px, env(safe-area-inset-bottom, 14px));
+                bottom: max(18px, env(safe-area-inset-bottom, 18px));
                 left: 50%;
                 transform: translateX(-50%);
-                color: rgba(255, 255, 255, 0.55);
-                font: 11px/1.6 "Courier New", monospace;
-                letter-spacing: 0.08em;
+                color: rgba(255, 255, 255, 0.92);
+                font: 600 28px/1 "Courier New", monospace;
+                letter-spacing: 0.06em;
                 text-align: center;
                 pointer-events: none;
                 z-index: 10;
                 white-space: nowrap;
+                background: rgba(0, 0, 0, 0.45);
+                backdrop-filter: blur(6px);
+                -webkit-backdrop-filter: blur(6px);
+                padding: 7px 18px;
+                border-radius: 20px;
+                border: 1px solid rgba(255, 255, 255, 0.12);
             }
         </style>
     </head>
@@ -494,14 +500,25 @@
                                 sk.noStroke();
                                 sk.ellipse(mx, my, r * 2, r * 2);
                             }
-                            // moon disc
-                            sk.fill(238, 244, 215);
-                            sk.noStroke();
-                            sk.ellipse(mx, my, 38, 38);
-                            // crescent shadow
-                            sk.fill(12, 18, 48);
-                            sk.noStroke();
-                            sk.ellipse(mx + 11, my, 32, 34);
+
+                            // crescent: draw full disc then punch transparent shadow
+                            // using even-odd fill clipped to the moon circle so the
+                            // sky gradient shows through (no hardcoded sky colour)
+                            {
+                                const ctx = sk.drawingContext;
+                                ctx.save();
+                                // clip to moon disc so the shadow hole stays inside it
+                                ctx.beginPath();
+                                ctx.arc(mx, my, 19, 0, Math.PI * 2);
+                                ctx.clip();
+                                // even-odd: two overlapping circles → intersection not filled
+                                ctx.beginPath();
+                                ctx.arc(mx,      my, 19, 0, Math.PI * 2, false); // moon CW
+                                ctx.arc(mx + 11, my, 16, 0, Math.PI * 2, true);  // shadow CCW
+                                ctx.fillStyle = 'rgba(238,244,215,1)';
+                                ctx.fill('evenodd');
+                                ctx.restore();
+                            }
                         }
                     }
 
@@ -1077,54 +1094,71 @@
                         const vx = hcx;
                         const vy = hcy - hh - rh; // roof peak
                         const pole = 38;
+                        const pivotY = vy - pole;
 
-                        // pole
-                        sk.stroke(88, 70, 50);
+                        // soft glow halo so the vane is always readable against sky
+                        for (let r = 52; r > 0; r -= 8) {
+                            sk.fill(255, 255, 220, sk.map(r, 0, 52, 55, 0));
+                            sk.noStroke();
+                            sk.ellipse(vx, pivotY, r * 2, r * 2);
+                        }
+
+                        // pole — bright so it shows against dark sky
+                        sk.stroke(220, 210, 185);
                         sk.strokeWeight(2.5);
-                        sk.line(vx, vy, vx, vy - pole);
+                        sk.line(vx, vy, vx, pivotY);
                         sk.noStroke();
 
-                        // cardinal N-S-E-W arms (fixed)
-                        sk.stroke(72, 58, 40);
-                        sk.strokeWeight(1.2);
-                        sk.line(vx - 14, vy - pole, vx + 14, vy - pole);
-                        sk.line(vx, vy - pole - 12, vx, vy - pole + 12);
-                        sk.fill(58, 42, 28);
-                        sk.noStroke();
-                        sk.textSize(8);
+                        // cardinal cross arms
+                        sk.stroke(210, 200, 175);
+                        sk.strokeWeight(1.4);
+                        sk.line(vx - 14, pivotY, vx + 14, pivotY);
+                        sk.line(vx, pivotY - 12, vx, pivotY + 12);
+
+                        // cardinal labels — white with dark shadow for legibility on any sky
+                        sk.textSize(9);
                         sk.textAlign(sk.CENTER, sk.CENTER);
-                        sk.text("N", vx, vy - pole - 18);
-                        sk.text("S", vx, vy - pole + 18);
-                        sk.text("E", vx + 20, vy - pole);
-                        sk.text("W", vx - 20, vy - pole);
+                        const labels = [
+                            ["N", vx,      pivotY - 20],
+                            ["S", vx,      pivotY + 20],
+                            ["E", vx + 22, pivotY],
+                            ["W", vx - 22, pivotY],
+                        ];
+                        for (const [lbl, lx, ly] of labels) {
+                            sk.fill(0, 0, 0, 140);
+                            sk.noStroke();
+                            sk.text(lbl, lx + 1, ly + 1); // shadow
+                            sk.fill(240, 235, 210);
+                            sk.text(lbl, lx, ly);
+                        }
 
-                        // vane rotates: points to FROM direction (traditional weather vane)
-                        // meteorological windDir = degrees FROM; arrow head points FROM direction
-                        // p5.js: angle 0 = right, CW positive
-                        // wind from North (0°) → head points up → p5 angle = -PI/2
                         const vaneAngle = sk.radians(windDir) - sk.HALF_PI;
-                        // gentle animated wobble proportional to wind
                         const wobble = Math.sin(t * 0.05) * wf * 0.08;
 
                         sk.push();
-                        sk.translate(vx, vy - pole);
+                        sk.translate(vx, pivotY);
                         sk.rotate(vaneAngle + wobble);
 
-                        // arrow shaft
-                        sk.stroke(52, 52, 52);
-                        sk.strokeWeight(2);
+                        // arrow shaft — light with dark outline so it pops on any background
+                        sk.stroke(30, 30, 30);
+                        sk.strokeWeight(3.5);
+                        sk.line(-24, 0, 24, 0);
+                        sk.stroke(230, 225, 200);
+                        sk.strokeWeight(1.8);
                         sk.line(-24, 0, 24, 0);
 
-                        // arrowhead (points INTO wind / FROM direction)
-                        sk.fill(52, 52, 52);
-                        sk.noStroke();
-                        sk.triangle(16, -5, 16, 5, 28, 0);
+                        // arrowhead — bright with dark border
+                        sk.fill(235, 230, 205);
+                        sk.stroke(30, 30, 30);
+                        sk.strokeWeight(1.5);
+                        sk.triangle(16, -6, 16, 6, 30, 0);
 
-                        // tail fin (pushed by wind)
-                        sk.fill(175, 38, 38);
-                        sk.noStroke();
-                        sk.triangle(-16, -4, -16, 4, -28, -11);
-                        sk.triangle(-16, -4, -16, 4, -28, 11);
+                        // tail fin — vivid red with dark border (always visible)
+                        sk.fill(210, 40, 40);
+                        sk.stroke(80, 10, 10);
+                        sk.strokeWeight(1.2);
+                        sk.triangle(-16, -4, -16, 4, -30, -12);
+                        sk.triangle(-16, -4, -16, 4, -30, 12);
 
                         sk.pop();
                     }
