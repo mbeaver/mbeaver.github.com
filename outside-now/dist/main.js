@@ -186,11 +186,13 @@
         sk.resizeCanvas(sk.windowWidth, sk.windowHeight);
       };
       function sceneTransform() {
-        const sfx = sk.windowWidth / W;
-        const sfy = (sk.windowHeight - STRIP_H) / H;
+        const availH = sk.windowHeight - STRIP_H;
+        const isPortrait = sk.windowWidth / availH < 0.85;
+        const sfx = sk.windowWidth / (isPortrait ? 700 : W);
+        const sfy = availH / H;
         _sf = Math.min(sfx, sfy);
         const ox = (sk.windowWidth - W * _sf) / 2;
-        _oy = (sk.windowHeight - STRIP_H - H * _sf) / 2;
+        _oy = isPortrait ? availH * 0.55 - GND * _sf : (availH - H * _sf) / 2;
         sk.translate(ox, _oy);
         sk.scale(_sf, _sf);
       }
