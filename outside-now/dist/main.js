@@ -81,9 +81,9 @@
     });
   }
   async function getIPLocation() {
-    const r = await fetch("https://ipapi.co/json/");
+    const r = await fetch("https://ipwho.is/");
     const d = await r.json();
-    if (!d.latitude) throw new Error("ip-geo-failed");
+    if (!d.success || !d.latitude) throw new Error("ip-geo-failed");
     return {
       lat: d.latitude,
       lon: d.longitude,
@@ -116,14 +116,19 @@
       const pos = await getGPSLocation();
       const lat = pos.coords.latitude;
       const lon = pos.coords.longitude;
-      const place2 = await reverseGeocode(lat, lon);
-      return { lat, lon, place: place2, source: "gps" };
+      const place = await reverseGeocode(lat, lon);
+      return { lat, lon, place, source: "gps" };
     } catch (gpsErr) {
       console.info("GPS unavailable:", gpsErr.message, "\u2014 trying IP geolocation");
     }
-    const ip = await getIPLocation();
-    const place = ip.city ? `${ip.city}${ip.region ? ", " + ip.region : ""}` : `${ip.lat.toFixed(2)}\xB0, ${ip.lon.toFixed(2)}\xB0`;
-    return { lat: ip.lat, lon: ip.lon, place, source: "ip" };
+    try {
+      const ip = await getIPLocation();
+      const place = ip.city ? `${ip.city}${ip.region ? ", " + ip.region : ""}` : `${ip.lat.toFixed(2)}\xB0, ${ip.lon.toFixed(2)}\xB0`;
+      return { lat: ip.lat, lon: ip.lon, place, source: "ip" };
+    } catch (ipErr) {
+      console.info("IP geolocation unavailable:", ipErr.message, "\u2014 using default location");
+    }
+    return { lat: 35.9049, lon: -78.7003, place: "Raleigh, NC", source: "hardcoded" };
   }
 
   // src/sketch.ts
@@ -150,9 +155,12 @@
         return mAdj <= 1 || mAdj === 11 ? "winter" : mAdj <= 4 ? "spring" : mAdj <= 7 ? "summer" : "fall";
       }
       let season = computeSeason(w.lat || 0);
-      const hour = (/* @__PURE__ */ new Date()).getHours();
-      const timeMin = (/* @__PURE__ */ new Date()).getMinutes();
-      const tod = hour + timeMin / 60;
+      function localSolarTime(lon) {
+        const now = /* @__PURE__ */ new Date();
+        const utcH = now.getUTCHours() + now.getUTCMinutes() / 60;
+        return (utcH + lon / 15 + 24) % 24;
+      }
+      let tod = localSolarTime(w.lon || 0);
       let windRad = windDir * Math.PI / 180;
       let cloudDriftX = -Math.sin(windRad);
       let cloudDriftY = Math.cos(windRad) * 0.18;
@@ -891,6 +899,7 @@
         isRain = !isSnow && (code >= 51 && code <= 67 || code >= 80 && code <= 82);
         isStorm = code >= 95 && code <= 99;
         season = computeSeason(nw.lat || 0);
+        tod = localSolarTime(nw.lon || 0);
         windRad = windDir * Math.PI / 180;
         cloudDriftX = -Math.sin(windRad);
         cloudDriftY = Math.cos(windRad) * 0.18;
@@ -1239,6 +1248,9 @@
     el("loc-cancel").addEventListener("click", hideDialog);
     el("loc-reset").addEventListener("click", () => {
       currentLocStr = origLocStr;
+      currentBaseLocStr = origLocStr;
+      currentWeather = origWeather;
+      currentForecast = origForecast;
       sketchHandle.updateScene(origWeather, origForecast, origLocStr, 0);
       hideDialog();
     });
