@@ -626,9 +626,10 @@
         const ty = GND - 145;
         const tH = 100;
         const tW = 16;
-        sk.fill(198, 182, 158);
-        sk.noStroke();
-        sk.rect(tx - 20, ty - 8, 40, tH + 22, 5);
+        sk.fill(248, 244, 236, 200);
+        sk.stroke(180, 165, 145);
+        sk.strokeWeight(1);
+        sk.rect(tx - 20, ty - 22, 58, tH + 48, 5);
         sk.fill(238, 228, 212);
         sk.stroke(175, 158, 138);
         sk.strokeWeight(1);
@@ -709,7 +710,7 @@
         sk.strokeWeight(1.8);
         sk.line(-10.4, 0, 10.4, 0);
         sk.push();
-        sk.scale(0.65);
+        sk.scale(0.45);
         sk.fill(235, 230, 205);
         sk.stroke(30, 30, 30);
         sk.strokeWeight(1.5);
