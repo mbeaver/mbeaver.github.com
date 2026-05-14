@@ -24,9 +24,94 @@
                 top: 0;
                 left: 0;
             }
+            #loc-dialog {
+                position: fixed;
+                inset: 0;
+                z-index: 100;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            #loc-dialog.loc-hidden { display: none; }
+            #loc-overlay {
+                position: absolute;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.65);
+            }
+            #loc-modal {
+                position: relative;
+                z-index: 1;
+                background: rgba(8, 18, 42, 0.97);
+                border: 1px solid rgba(100, 140, 200, 0.4);
+                border-radius: 8px;
+                padding: 20px;
+                width: min(420px, 90vw);
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+            #loc-input {
+                width: 100%;
+                padding: 10px 14px;
+                background: rgba(255, 255, 255, 0.08);
+                border: 1px solid rgba(100, 140, 200, 0.5);
+                border-radius: 4px;
+                color: #fff;
+                font-size: 16px;
+                outline: none;
+                box-sizing: border-box;
+            }
+            #loc-input:focus { border-color: rgba(100, 160, 255, 0.8); }
+            #loc-suggestions {
+                list-style: none;
+                margin: 0;
+                padding: 0;
+                max-height: 180px;
+                overflow-y: auto;
+            }
+            #loc-suggestions li {
+                padding: 9px 14px;
+                color: rgba(220, 230, 255, 0.9);
+                font-size: 14px;
+                cursor: pointer;
+                border-radius: 3px;
+            }
+            #loc-suggestions li:hover,
+            #loc-suggestions li.loc-active { background: rgba(100, 140, 200, 0.25); }
+            #loc-buttons {
+                display: flex;
+                gap: 8px;
+                justify-content: flex-end;
+            }
+            #loc-buttons button {
+                padding: 8px 18px;
+                border-radius: 4px;
+                border: 1px solid rgba(100, 140, 200, 0.4);
+                background: rgba(255, 255, 255, 0.07);
+                color: rgba(220, 230, 255, 0.9);
+                font-size: 14px;
+                cursor: pointer;
+            }
+            #loc-buttons button:hover { background: rgba(100, 140, 200, 0.2); }
+            #loc-ok {
+                border-color: rgba(100, 160, 255, 0.6) !important;
+                background: rgba(60, 100, 200, 0.25) !important;
+            }
         </style>
     </head>
     <body>
+        <div id="loc-dialog" class="loc-hidden">
+            <div id="loc-overlay"></div>
+            <div id="loc-modal">
+                <input id="loc-input" type="text" autocomplete="off" spellcheck="false" placeholder="Search for a city..." />
+                <ul id="loc-suggestions"></ul>
+                <div id="loc-buttons">
+                    <button id="loc-reset">Reset</button>
+                    <button id="loc-cancel">Cancel</button>
+                    <button id="loc-ok">OK</button>
+                </div>
+            </div>
+        </div>
         <script src="dist/main.js"></script>
     </body>
 </html>

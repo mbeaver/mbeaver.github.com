@@ -91,6 +91,26 @@
       region: d.region ?? ""
     };
   }
+  async function searchLocations(query) {
+    const r = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&addressdetails=1`,
+      { headers: { "Accept-Language": "en" } }
+    );
+    const d = await r.json();
+    return d.map((item) => {
+      const addr = item.address ?? {};
+      const city = addr.city ?? addr.town ?? addr.village ?? "";
+      const state = addr.state ?? "";
+      const country = addr.country ?? "";
+      const parts = [city, state, country].filter(Boolean);
+      return {
+        lat: parseFloat(item.lat),
+        lon: parseFloat(item.lon),
+        place: parts.length ? parts.join(", ") : item.display_name,
+        source: "hardcoded"
+      };
+    });
+  }
   async function resolveLocation() {
     try {
       const pos = await getGPSLocation();
@@ -108,27 +128,38 @@
 
   // src/sketch.ts
   var STRIP_H = 130;
-  function startSketch(w, forecast, locStr) {
+  function startSketch(w, forecast, locStr, callbacks) {
+    let _applyFn = null;
     new p5((sk) => {
       const W = 900, H = 560;
       const GND = H * 0.615;
       let _sf = 1, _oy = 0;
-      const { temp, windSpeed, windDir, cloudCover, code, isDay } = w;
-      const isSnow = code >= 71 && code <= 77 || code === 85 || code === 86;
-      const isRain = !isSnow && (code >= 51 && code <= 67 || code >= 80 && code <= 82);
-      const isStorm = code >= 95 && code <= 99;
+      let temp = w.temp;
+      let windSpeed = w.windSpeed;
+      let windDir = w.windDir;
+      let cloudCover = w.cloudCover;
+      let code = w.code;
+      let isDay = w.isDay;
+      let isSnow = code >= 71 && code <= 77 || code === 85 || code === 86;
+      let isRain = !isSnow && (code >= 51 && code <= 67 || code >= 80 && code <= 82);
+      let isStorm = code >= 95 && code <= 99;
       const month = (/* @__PURE__ */ new Date()).getMonth();
-      const south = (w.lat || 0) < 0;
-      const mAdj = south ? (month + 6) % 12 : month;
-      const season = mAdj <= 1 || mAdj === 11 ? "winter" : mAdj <= 4 ? "spring" : mAdj <= 7 ? "summer" : "fall";
+      function computeSeason(lat) {
+        const south = lat < 0;
+        const mAdj = south ? (month + 6) % 12 : month;
+        return mAdj <= 1 || mAdj === 11 ? "winter" : mAdj <= 4 ? "spring" : mAdj <= 7 ? "summer" : "fall";
+      }
+      let season = computeSeason(w.lat || 0);
       const hour = (/* @__PURE__ */ new Date()).getHours();
-      const min = (/* @__PURE__ */ new Date()).getMinutes();
-      const tod = hour + min / 60;
-      const windRad = sk.radians(windDir);
-      const cloudDriftX = -Math.sin(windRad);
-      const cloudDriftY = Math.cos(windRad) * 0.18;
-      const wf = Math.min(windSpeed / 25, 1.4);
-      const NPART = isRain ? 280 : isSnow ? 180 : 0;
+      const timeMin = (/* @__PURE__ */ new Date()).getMinutes();
+      const tod = hour + timeMin / 60;
+      let windRad = windDir * Math.PI / 180;
+      let cloudDriftX = -Math.sin(windRad);
+      let cloudDriftY = Math.cos(windRad) * 0.18;
+      let wf = Math.min(windSpeed / 25, 1.4);
+      let _locStr = locStr;
+      let _forecast = forecast;
+      let _selectedTile = 0;
       const particles = [];
       const clouds = [];
       const grass = [];
@@ -140,6 +171,7 @@
         cnv.parent(document.body);
         sk.frameRate(30);
         sk.noSmooth();
+        const NPART = isRain ? 280 : isSnow ? 180 : 0;
         for (let i = 0; i < NPART; i++) particles.push(mkParticle(true));
         const nc = Math.round(cloudCover / 18) + (isRain || isSnow ? 2 : 0) + (isStorm ? 2 : 0);
         for (let i = 0; i < Math.min(nc, 7); i++) {
@@ -184,6 +216,19 @@
       };
       sk.windowResized = () => {
         sk.resizeCanvas(sk.windowWidth, sk.windowHeight);
+      };
+      sk.mousePressed = () => {
+        const sy = sk.windowHeight - STRIP_H;
+        const infoH = 38;
+        if (sk.mouseY >= sy && sk.mouseY < sy + infoH) {
+          callbacks?.onInfoBarClick?.();
+        } else if (sk.mouseY >= sy + infoH) {
+          const i = Math.floor(sk.mouseX / (sk.windowWidth / 7));
+          if (i >= 0 && i < 7) callbacks?.onForecastTileClick?.(i);
+        }
+      };
+      sk.mouseMoved = () => {
+        document.body.style.cursor = sk.mouseY >= sk.windowHeight - STRIP_H ? "pointer" : "default";
       };
       function sceneTransform() {
         const availH = sk.windowHeight - STRIP_H;
@@ -830,8 +875,47 @@
           sk.pop();
         }
       }
+      function applyWeatherState(nw, nf, ns, tile) {
+        const prevIsRain = isRain;
+        const prevIsSnow = isSnow;
+        temp = nw.temp;
+        windSpeed = nw.windSpeed;
+        windDir = nw.windDir;
+        cloudCover = nw.cloudCover;
+        code = nw.code;
+        isDay = nw.isDay;
+        _forecast = nf;
+        _locStr = ns;
+        _selectedTile = tile;
+        isSnow = code >= 71 && code <= 77 || code === 85 || code === 86;
+        isRain = !isSnow && (code >= 51 && code <= 67 || code >= 80 && code <= 82);
+        isStorm = code >= 95 && code <= 99;
+        season = computeSeason(nw.lat || 0);
+        windRad = windDir * Math.PI / 180;
+        cloudDriftX = -Math.sin(windRad);
+        cloudDriftY = Math.cos(windRad) * 0.18;
+        wf = Math.min(windSpeed / 25, 1.4);
+        if (isRain !== prevIsRain || isSnow !== prevIsSnow) {
+          particles.length = 0;
+          const nPart = isRain ? 280 : isSnow ? 180 : 0;
+          for (let i = 0; i < nPart; i++) particles.push(mkParticle(true));
+        }
+        clouds.length = 0;
+        const nc = Math.round(cloudCover / 18) + (isRain || isSnow ? 2 : 0) + (isStorm ? 2 : 0);
+        for (let i = 0; i < Math.min(nc, 7); i++) {
+          clouds.push({
+            x: sk.random(W),
+            y: sk.random(H * 0.05, H * 0.28),
+            w: sk.random(130, 260),
+            h: sk.random(45, 85),
+            spd: sk.random(0.25, 0.65) * Math.max(windSpeed / 12, 0.15),
+            op: sk.random(180, 245)
+          });
+        }
+      }
+      _applyFn = applyWeatherState;
       function drawForecastStrip() {
-        if (!forecast.length) return;
+        if (!_forecast.length) return;
         const stripH = STRIP_H;
         const infoH = 38;
         const sy = sk.windowHeight - stripH;
@@ -852,19 +936,27 @@
         sk.textSize(18);
         sk.textStyle(sk.BOLD);
         sk.textAlign(sk.CENTER, sk.CENTER);
-        sk.text(locStr, sk.windowWidth / 2, sy + infoH / 2);
+        sk.text(_locStr, sk.windowWidth / 2, sy + infoH / 2);
         sk.textStyle(sk.NORMAL);
         sk.stroke(100, 140, 200, 70);
         sk.strokeWeight(1);
         sk.line(0, tileY, sk.windowWidth, tileY);
-        for (let i = 0; i < forecast.length && i < 7; i++) {
-          const fd = forecast[i];
+        for (let i = 0; i < _forecast.length && i < 7; i++) {
+          const fd = _forecast[i];
           const tx = i * tileW;
           const cx = tx + tileW / 2;
           if (i === 0) {
             sk.fill(60, 100, 180, 50);
             sk.noStroke();
             sk.rect(tx, tileY, tileW, tileH);
+          }
+          if (i === _selectedTile && _selectedTile > 0) {
+            sk.fill(80, 130, 220, 80);
+            sk.noStroke();
+            sk.rect(tx, tileY, tileW, tileH);
+            sk.stroke(180, 210, 255, 200);
+            sk.strokeWeight(2);
+            sk.line(tx, tileY, tx + tileW, tileY);
           }
           if (i > 0) {
             sk.stroke(100, 140, 200, 50);
@@ -952,9 +1044,94 @@
         sk.pop();
       }
     });
+    return {
+      updateScene(nw, nf, ns, tile = 0) {
+        _applyFn?.(nw, nf, ns, tile);
+      }
+    };
   }
 
   // src/main.ts
+  var origWeather = defaultWeather();
+  var origForecast = defaultForecast();
+  var origLocStr = "";
+  var sketchHandle;
+  var currentLocStr = "";
+  var currentWeather = defaultWeather();
+  var currentForecast = defaultForecast();
+  var currentBaseLocStr = "";
+  var selectedSuggestion = null;
+  var currentSuggestions = [];
+  var debounceTimer = null;
+  var activeIdx = -1;
+  function el(id) {
+    return document.getElementById(id);
+  }
+  function showDialog() {
+    selectedSuggestion = null;
+    currentSuggestions = [];
+    activeIdx = -1;
+    el("loc-dialog").classList.remove("loc-hidden");
+    const inp = el("loc-input");
+    inp.value = currentLocStr.split(" \xB7 ")[0] ?? currentLocStr;
+    el("loc-suggestions").innerHTML = "";
+    inp.focus();
+    inp.select();
+  }
+  function hideDialog() {
+    el("loc-dialog").classList.add("loc-hidden");
+    el("loc-suggestions").innerHTML = "";
+    selectedSuggestion = null;
+    currentSuggestions = [];
+    activeIdx = -1;
+  }
+  function renderSuggestions(results) {
+    currentSuggestions = results;
+    activeIdx = -1;
+    const ul = el("loc-suggestions");
+    ul.innerHTML = "";
+    results.forEach((r) => {
+      const li = document.createElement("li");
+      li.textContent = r.place;
+      li.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        selectedSuggestion = r;
+        el("loc-input").value = r.place;
+        ul.innerHTML = "";
+      });
+      ul.appendChild(li);
+    });
+  }
+  function updateActiveItem() {
+    const items = el("loc-suggestions").querySelectorAll("li");
+    items.forEach((li, i) => li.classList.toggle("loc-active", i === activeIdx));
+  }
+  async function applyLocation(lat, lon, place) {
+    try {
+      const result = await fetchWeather(lat, lon);
+      const newLocStr = `${place} \xB7 ${Math.round(result.current.temp)}\xB0F \xB7 ${Math.round(result.current.windSpeed)} mph`;
+      currentLocStr = newLocStr;
+      currentBaseLocStr = newLocStr;
+      currentWeather = result.current;
+      currentForecast = result.forecast;
+      sketchHandle.updateScene(result.current, result.forecast, newLocStr, 0);
+    } catch (e) {
+      console.warn("Could not fetch weather for location:", e);
+    }
+  }
+  async function handleOk() {
+    const inp = el("loc-input");
+    const target = selectedSuggestion ?? currentSuggestions[0] ?? null;
+    if (target) {
+      await applyLocation(target.lat, target.lon, target.place);
+    } else if (inp.value.trim()) {
+      const results = await searchLocations(inp.value.trim());
+      if (results.length > 0) {
+        await applyLocation(results[0].lat, results[0].lon, results[0].place);
+      }
+    }
+    hideDialog();
+  }
   async function init() {
     let w = defaultWeather();
     let forecast = defaultForecast();
@@ -978,7 +1155,94 @@
     } catch (e) {
       console.warn("Could not fetch weather:", e);
     }
-    startSketch(w, forecast, locStr);
+    origWeather = w;
+    origForecast = forecast;
+    origLocStr = locStr;
+    currentLocStr = locStr;
+    currentWeather = w;
+    currentForecast = forecast;
+    currentBaseLocStr = locStr;
+    sketchHandle = startSketch(w, forecast, locStr, {
+      onInfoBarClick: showDialog,
+      onForecastTileClick: (i) => {
+        if (i === 0) {
+          currentLocStr = currentBaseLocStr;
+          sketchHandle.updateScene(currentWeather, currentForecast, currentBaseLocStr, 0);
+          return;
+        }
+        const fd = currentForecast[i];
+        if (!fd) return;
+        const cloudCover = fd.code <= 1 ? 5 : fd.code === 2 ? 40 : fd.code === 3 ? 85 : 95;
+        const synthW = {
+          temp: fd.tempMax,
+          windSpeed: fd.windMax,
+          windDir: currentWeather.windDir,
+          cloudCover,
+          precip: fd.precipSum > 0 ? 1 : 0,
+          code: fd.code,
+          isDay: 1,
+          lat: currentWeather.lat,
+          lon: currentWeather.lon
+        };
+        const city = currentBaseLocStr.split(" \xB7 ")[0] ?? currentBaseLocStr;
+        const d = /* @__PURE__ */ new Date(fd.date + "T12:00:00");
+        const DAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const forecastLocStr = `${city} \xB7 ${DAY[d.getDay()]} ${MON[d.getMonth()]} ${d.getDate()} \xB7 ${Math.round(fd.tempMax)}\xB0 / ${Math.round(fd.tempMin)}\xB0F \xB7 ${Math.round(fd.windMax)} mph`;
+        currentLocStr = forecastLocStr;
+        sketchHandle.updateScene(synthW, currentForecast, forecastLocStr, i);
+      }
+    });
+    const inp = el("loc-input");
+    inp.addEventListener("input", () => {
+      selectedSuggestion = null;
+      if (debounceTimer !== null) clearTimeout(debounceTimer);
+      const q = inp.value.trim();
+      if (q.length < 2) {
+        el("loc-suggestions").innerHTML = "";
+        currentSuggestions = [];
+        return;
+      }
+      debounceTimer = setTimeout(async () => {
+        const results = await searchLocations(q);
+        renderSuggestions(results);
+      }, 300);
+    });
+    inp.addEventListener("keydown", (e) => {
+      const items = Array.from(el("loc-suggestions").querySelectorAll("li"));
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        activeIdx = Math.min(activeIdx + 1, items.length - 1);
+        updateActiveItem();
+        if (activeIdx >= 0) {
+          selectedSuggestion = currentSuggestions[activeIdx] ?? null;
+          inp.value = items[activeIdx].textContent ?? inp.value;
+        }
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        activeIdx = Math.max(activeIdx - 1, -1);
+        updateActiveItem();
+        if (activeIdx >= 0) {
+          selectedSuggestion = currentSuggestions[activeIdx] ?? null;
+          inp.value = items[activeIdx].textContent ?? inp.value;
+        } else {
+          selectedSuggestion = null;
+        }
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        void handleOk();
+      } else if (e.key === "Escape") {
+        hideDialog();
+      }
+    });
+    el("loc-ok").addEventListener("click", () => void handleOk());
+    el("loc-cancel").addEventListener("click", hideDialog);
+    el("loc-reset").addEventListener("click", () => {
+      currentLocStr = origLocStr;
+      sketchHandle.updateScene(origWeather, origForecast, origLocStr, 0);
+      hideDialog();
+    });
+    el("loc-overlay").addEventListener("click", hideDialog);
   }
   init();
 })();
