@@ -1112,9 +1112,21 @@
       li.textContent = r.place;
       li.addEventListener("pointerdown", (e) => {
         e.preventDefault();
+      });
+      li.addEventListener("touchend", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         selectedSuggestion = r;
         el("loc-input").value = r.place;
         ul.innerHTML = "";
+        activeIdx = -1;
+      });
+      li.addEventListener("click", (e) => {
+        e.stopPropagation();
+        selectedSuggestion = r;
+        el("loc-input").value = r.place;
+        ul.innerHTML = "";
+        activeIdx = -1;
       });
       ul.appendChild(li);
     });
@@ -1252,14 +1264,26 @@
         hideDialog();
       }
     });
-    el("loc-ok").addEventListener("click", () => void handleOk());
-    el("loc-cancel").addEventListener("click", hideDialog);
-    el("loc-reset").addEventListener("click", () => {
+    function wireTap(id, fn) {
+      const btn = el(id);
+      btn.addEventListener("touchend", (e) => {
+        e.preventDefault();
+        fn();
+      });
+      btn.addEventListener("click", fn);
+    }
+    wireTap("loc-ok", () => void handleOk());
+    wireTap("loc-cancel", hideDialog);
+    wireTap("loc-reset", () => {
       currentLocStr = origLocStr;
       currentBaseLocStr = origLocStr;
       currentWeather = origWeather;
       currentForecast = origForecast;
       sketchHandle.updateScene(origWeather, origForecast, origLocStr, 0);
+      hideDialog();
+    });
+    el("loc-overlay").addEventListener("touchend", (e) => {
+      e.preventDefault();
       hideDialog();
     });
     el("loc-overlay").addEventListener("click", hideDialog);
