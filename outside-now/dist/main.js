@@ -267,11 +267,11 @@
         drawClouds();
         if (isStorm) drawLightningMaybe();
         drawGround();
-        drawTree(155, GND);
-        drawTree(640, GND);
+        drawTree(230, GND);
+        drawTree(670, GND);
         drawHouse();
         drawThermometer();
-        drawWeatherVane();
+        drawWindGauge();
         drawGrassLayer();
         drawPrecipitation();
         if (season === "fall") drawGroundLeaves();
@@ -542,7 +542,12 @@
         }
         sk.stroke(105, 74, 40);
         sk.strokeWeight(1.5);
-        sk.line(x + trunkW / 2 - 3, baseY - 6, x + trunkW / 2 - 3, baseY - trunkH + 10);
+        sk.line(
+          x + trunkW / 2 - 3,
+          baseY - 6,
+          x + trunkW / 2 - 3,
+          baseY - trunkH + 10
+        );
         sk.noStroke();
         if (season === "winter") {
           sk.stroke(68, 46, 24);
@@ -557,7 +562,12 @@
           ];
           for (let i = 0; i < br.length; i++) {
             sk.strokeWeight(i < 1 ? 4 : i < 3 ? 2.5 : 1.5);
-            sk.line(x + br[i][0], baseY + br[i][1], x + br[i][2], baseY + br[i][3]);
+            sk.line(
+              x + br[i][0],
+              baseY + br[i][1],
+              x + br[i][2],
+              baseY + br[i][3]
+            );
           }
           sk.noStroke();
           sk.fill(245, 250, 255, 185);
@@ -582,7 +592,14 @@
         sk.fill(138, 76, 56);
         sk.stroke(108, 58, 42);
         sk.strokeWeight(2);
-        sk.triangle(hcx - hw / 2 - 16, hcy - hh, hcx + hw / 2 + 16, hcy - hh, hcx, hcy - hh - rh);
+        sk.triangle(
+          hcx - hw / 2 - 16,
+          hcy - hh,
+          hcx + hw / 2 + 16,
+          hcy - hh,
+          hcx,
+          hcy - hh - rh
+        );
         sk.stroke(95, 50, 36);
         sk.strokeWeight(3);
         sk.line(hcx - hw / 2 - 16, hcy - hh, hcx + hw / 2 + 16, hcy - hh);
@@ -683,6 +700,10 @@
         }
       }
       function drawThermometer() {
+        sk.push();
+        sk.translate(310, GND + 131);
+        sk.scale(1.5);
+        sk.translate(-759, -(GND - 93));
         const tx = 750;
         const ty = GND - 145;
         const tH = 100;
@@ -722,66 +743,86 @@
         sk.textSize(13);
         sk.textAlign(sk.CENTER, sk.CENTER);
         sk.text(`${Math.round(temp)}\xB0F`, tx, ty - 10);
+        sk.pop();
       }
-      function drawWeatherVane() {
-        const hcx = W * 0.5;
-        const hcy = GND;
-        const hh = 155, rh = 95;
-        const vx = hcx;
-        const vy = hcy - hh - rh;
-        const pole = 38;
-        const pivotY = vy - pole;
-        for (let r = 52; r > 0; r -= 8) {
-          sk.fill(255, 255, 220, sk.map(r, 0, 52, 55, 0));
-          sk.noStroke();
-          sk.ellipse(vx, pivotY, r * 2, r * 2);
-        }
-        sk.stroke(220, 210, 185);
-        sk.strokeWeight(2.5);
-        sk.line(vx, vy, vx, pivotY);
+      function drawWindGauge() {
+        sk.push();
+        sk.translate(620, GND + 131);
+        sk.scale(1.5);
+        sk.translate(-835, -(GND - 93));
+        const tx = 750, ty = GND - 145, tH = 100;
+        const panelT = ty - 22;
+        const panelH = tH + 48;
+        const panelL = 796;
+        const panelW = 78;
+        const gx = panelL + panelW / 2;
+        const cr = 30;
+        const cy = panelT + 22 + cr;
+        sk.fill(248, 244, 236, 200);
+        sk.stroke(180, 165, 145);
+        sk.strokeWeight(1);
+        sk.rect(panelL, panelT, panelW, panelH, 5);
         sk.noStroke();
-        sk.stroke(210, 200, 175);
-        sk.strokeWeight(1.4);
-        sk.line(vx - 14, pivotY, vx + 14, pivotY);
-        sk.line(vx, pivotY - 12, vx, pivotY + 12);
-        sk.textSize(9);
+        sk.fill(55, 38, 18);
+        sk.textSize(11);
+        sk.textAlign(sk.CENTER, sk.TOP);
+        sk.text("WIND", gx, panelT + 6);
+        sk.fill(238, 228, 212);
+        sk.stroke(175, 158, 138);
+        sk.strokeWeight(1.2);
+        sk.ellipse(gx, cy, cr * 2, cr * 2);
+        sk.stroke(160, 140, 118);
+        sk.strokeWeight(1);
+        for (let deg = 0; deg < 360; deg += 45) {
+          const rad = sk.radians(deg - 90);
+          const inner = deg % 90 === 0 ? cr - 7 : cr - 4;
+          sk.line(
+            gx + Math.cos(rad) * inner,
+            cy + Math.sin(rad) * inner,
+            gx + Math.cos(rad) * cr,
+            cy + Math.sin(rad) * cr
+          );
+        }
+        sk.textSize(8);
         sk.textAlign(sk.CENTER, sk.CENTER);
-        const cardinals = [
-          ["N", vx, pivotY - 20],
-          ["S", vx, pivotY + 20],
-          ["E", vx + 22, pivotY],
-          ["W", vx - 22, pivotY]
-        ];
-        for (const [lbl, lx, ly] of cardinals) {
-          sk.fill(0, 0, 0, 140);
+        const cards = [["N", 0], ["E", 90], ["S", 180], ["W", 270]];
+        for (const [lbl, deg] of cards) {
+          const rad = sk.radians(deg - 90);
+          const dist = cr - 12;
+          const lx = gx + Math.cos(rad) * dist;
+          const ly = cy + Math.sin(rad) * dist;
+          sk.fill(0, 0, 0, 90);
           sk.noStroke();
-          sk.text(lbl, lx + 1, ly + 1);
-          sk.fill(240, 235, 210);
+          sk.text(lbl, lx + 0.5, ly + 0.5);
+          sk.fill(70, 50, 25);
           sk.text(lbl, lx, ly);
         }
-        const vaneAngle = sk.radians(windDir) - sk.HALF_PI;
-        const wobble = Math.sin(t * 0.05) * wf * 0.08;
+        const wobble = Math.sin(t * 0.05) * wf * 0.06;
+        const arrowAngle = sk.radians(windDir - 90) + wobble;
+        const tipX = gx + Math.cos(arrowAngle) * (cr - 6);
+        const tipY = cy + Math.sin(arrowAngle) * (cr - 6);
+        const tailX = gx - Math.cos(arrowAngle) * (cr * 0.38);
+        const tailY = cy - Math.sin(arrowAngle) * (cr * 0.38);
+        sk.stroke(175, 38, 38);
+        sk.strokeWeight(2.5);
+        sk.line(tailX, tailY, tipX, tipY);
         sk.push();
-        sk.translate(vx, pivotY);
-        sk.rotate(vaneAngle + wobble);
-        sk.stroke(30, 30, 30);
-        sk.strokeWeight(3.5);
-        sk.line(-10.4, 0, 10.4, 0);
-        sk.stroke(230, 225, 200);
-        sk.strokeWeight(1.8);
-        sk.line(-10.4, 0, 10.4, 0);
-        sk.push();
-        sk.scale(0.45);
-        sk.fill(235, 230, 205);
-        sk.stroke(30, 30, 30);
-        sk.strokeWeight(1.5);
-        sk.triangle(16, -6, 16, 6, 30, 0);
-        sk.fill(210, 40, 40);
-        sk.stroke(80, 10, 10);
-        sk.strokeWeight(1.2);
-        sk.triangle(-16, -4, -16, 4, -30, -12);
-        sk.triangle(-16, -4, -16, 4, -30, 12);
+        sk.translate(tipX, tipY);
+        sk.rotate(arrowAngle);
+        sk.fill(175, 38, 38);
+        sk.noStroke();
+        sk.triangle(5, 0, -7, -4, -7, 4);
         sk.pop();
+        sk.fill(140, 115, 90);
+        sk.noStroke();
+        sk.ellipse(gx, cy, 5, 5);
+        sk.noStroke();
+        sk.fill(55, 38, 18);
+        sk.textSize(16);
+        sk.textAlign(sk.CENTER, sk.CENTER);
+        sk.text(`${Math.round(windSpeed)}`, gx, panelT + panelH - 32);
+        sk.textSize(10);
+        sk.text("mph", gx, panelT + panelH - 16);
         sk.pop();
       }
       function drawGrassLayer() {
@@ -817,7 +858,12 @@
             sk.fill(pc[0], pc[1], pc[2], 215);
             sk.noStroke();
             for (let a = 0; a < sk.TWO_PI; a += sk.PI / 3) {
-              sk.ellipse(fx + sw + Math.cos(a) * 5.5, fy - 17 + Math.sin(a) * 5.5, 7.5, 5.5);
+              sk.ellipse(
+                fx + sw + Math.cos(a) * 5.5,
+                fy - 17 + Math.sin(a) * 5.5,
+                7.5,
+                5.5
+              );
             }
             sk.fill(255, 238, 95);
             sk.ellipse(fx + sw, fy - 17, 6.5, 6.5);
@@ -861,7 +907,6 @@
         ltTimer--;
         if (ltTimer > 0) return;
         ltTimer = Math.round(sk.random(55, 210));
-        if (sk.random() > 0.28) return;
         const lx = sk.random(W * 0.15, W * 0.85);
         sk.push();
         sk.stroke(255, 255, 200, 210);
@@ -992,7 +1037,11 @@
           sk.noStroke();
           sk.textSize(13);
           sk.textAlign(sk.CENTER, sk.BOTTOM);
-          sk.text(`${Math.round(fd.tempMax)}\xB0 / ${Math.round(fd.tempMin)}\xB0`, cx, tileY + tileH - 5);
+          sk.text(
+            `${Math.round(fd.tempMax)}\xB0 / ${Math.round(fd.tempMin)}\xB0`,
+            cx,
+            tileY + tileH - 5
+          );
         }
         sk.pop();
       }
@@ -1017,7 +1066,9 @@
             sk.fill(255, 215, 50);
             sk.ellipse(cx + r * 0.7, cy - r * 0.6, r * 1.5, r * 1.5);
           }
-          sk.fill(code2 <= 2 ? sk.color(210, 215, 225, 235) : sk.color(170, 175, 185, 235));
+          sk.fill(
+            code2 <= 2 ? sk.color(210, 215, 225, 235) : sk.color(170, 175, 185, 235)
+          );
           sk.ellipse(cx, cy, r * 2.4, r * 1.5);
           sk.ellipse(cx - r * 0.6, cy + r * 0.4, r * 1.4, r);
           sk.ellipse(cx + r * 0.6, cy + r * 0.4, r * 1.4, r);
