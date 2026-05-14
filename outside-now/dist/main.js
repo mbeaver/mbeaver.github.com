@@ -225,15 +225,23 @@
       sk.windowResized = () => {
         sk.resizeCanvas(sk.windowWidth, sk.windowHeight);
       };
-      sk.mousePressed = () => {
+      function handleTap(x, y) {
         const sy = sk.windowHeight - STRIP_H;
         const infoH = 38;
-        if (sk.mouseY >= sy && sk.mouseY < sy + infoH) {
+        if (y >= sy && y < sy + infoH) {
           callbacks?.onInfoBarClick?.();
-        } else if (sk.mouseY >= sy + infoH) {
-          const i = Math.floor(sk.mouseX / (sk.windowWidth / 7));
+        } else if (y >= sy + infoH) {
+          const i = Math.floor(x / (sk.windowWidth / 7));
           if (i >= 0 && i < 7) callbacks?.onForecastTileClick?.(i);
         }
+      }
+      sk.mousePressed = () => {
+        handleTap(sk.mouseX, sk.mouseY);
+      };
+      sk.touchStarted = () => {
+        const t0 = sk.touches[0];
+        if (t0) handleTap(t0.x, t0.y);
+        return false;
       };
       sk.mouseMoved = () => {
         document.body.style.cursor = sk.mouseY >= sk.windowHeight - STRIP_H ? "pointer" : "default";
@@ -1102,7 +1110,7 @@
     results.forEach((r) => {
       const li = document.createElement("li");
       li.textContent = r.place;
-      li.addEventListener("mousedown", (e) => {
+      li.addEventListener("pointerdown", (e) => {
         e.preventDefault();
         selectedSuggestion = r;
         el("loc-input").value = r.place;
