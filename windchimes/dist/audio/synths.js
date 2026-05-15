@@ -1,4 +1,4 @@
-import { PluckSynth, FMSynth, MetalSynth } from 'tone';
+import { PluckSynth, FMSynth, AMSynth } from 'tone';
 import { midiToNote } from './scales.js';
 function makePluck(params) {
     return new PluckSynth(params);
@@ -6,7 +6,7 @@ function makePluck(params) {
 export function createSynths(profile) {
     switch (profile.material) {
         case 'aluminum': {
-            const synth = makePluck({ attackNoise: 1.2, dampening: 3500, resonance: 0.92 });
+            const synth = makePluck({ attackNoise: 0.5, dampening: 2200, resonance: 0.80 });
             return {
                 connect: (dest) => synth.connect(dest),
                 triggerNote: (midi, _dur, time) => synth.triggerAttack(midiToNote(midi), time),
@@ -14,10 +14,16 @@ export function createSynths(profile) {
             };
         }
         case 'bronze': {
-            const synth = makePluck({ attackNoise: 0.8, dampening: 2000, resonance: 0.72 });
+            const synth = new AMSynth({
+                oscillator: { type: 'triangle' },
+                envelope: { attack: 0.01, decay: 1.5, sustain: 0.2, release: 2.5 },
+                modulation: { type: 'sine' },
+                modulationEnvelope: { attack: 0.5, decay: 1.5, sustain: 0.6, release: 2.0 },
+                harmonicity: 2,
+            });
             return {
                 connect: (dest) => synth.connect(dest),
-                triggerNote: (midi, _dur, time) => synth.triggerAttack(midiToNote(midi), time),
+                triggerNote: (midi, dur, time) => synth.triggerAttackRelease(midiToNote(midi), dur, time),
                 dispose: () => synth.dispose(),
             };
         }
@@ -60,23 +66,23 @@ export function createSynths(profile) {
             };
         }
         case 'steel': {
-            const metal = new MetalSynth({
-                harmonicity: 12,
-                resonance: 1200,
-                modulationIndex: 50,
-                envelope: { attack: 0.001, decay: 0.3, release: 0.1 },
+            const synth = new FMSynth({
+                oscillator: { type: 'sawtooth' },
+                envelope: { attack: 0.001, decay: 0.2, sustain: 0.0, release: 0.5 },
+                modulation: { type: 'square' },
+                modulationEnvelope: { attack: 0.001, decay: 0.05, sustain: 0.0, release: 0.15 },
+                harmonicity: 2.5,
+                modulationIndex: 12,
             });
-            // Low bass PluckSynth layer underneath for storm texture
-            const bass = makePluck({ attackNoise: 0.6, dampening: 900, resonance: 0.45 });
+            const bass = makePluck({ attackNoise: 0.4, dampening: 600, resonance: 0.55 });
             return {
-                connect: (dest) => { metal.connect(dest); bass.connect(dest); },
+                connect: (dest) => { synth.connect(dest); bass.connect(dest); },
                 triggerNote: (midi, dur, time) => {
-                    metal.triggerAttackRelease(dur, time);
-                    // Bass layer 2 octaves lower, clamped to reasonable range
+                    synth.triggerAttackRelease(midiToNote(midi), dur, time);
                     const bassMidi = Math.max(24, midi - 24);
                     bass.triggerAttack(midiToNote(bassMidi), time);
                 },
-                dispose: () => { metal.dispose(); bass.dispose(); },
+                dispose: () => { synth.dispose(); bass.dispose(); },
             };
         }
     }

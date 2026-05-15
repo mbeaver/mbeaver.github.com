@@ -18,7 +18,7 @@ const ROOT_NAME = {
 };
 function selectMaterial(code) {
     if (code <= 1)
-        return "aluminum";
+        return "crystal";
     if (code <= 3)
         return "bronze";
     if (code >= 45 && code <= 48)
@@ -29,7 +29,7 @@ function selectMaterial(code) {
         return "crystal";
     if (code >= 95)
         return "steel";
-    return "aluminum";
+    return "crystal";
 }
 function selectScaleType(code) {
     if (code <= 1)
@@ -70,13 +70,15 @@ function selectRoot(tempMax) {
     return ROOT_MIDI["Eb"];
 }
 function selectOctaveRange(tempMax) {
-    if (tempMax > 80)
-        return [5, 6];
-    if (tempMax > 60)
-        return [4, 5];
-    if (tempMax > 40)
-        return [3, 5];
-    return [3, 4];
+    if (tempMax > 85)
+        return [4, 5]; // hot: higher tones, not extreme
+    if (tempMax > 75)
+        return [3, 5]; // warm: wide mix
+    if (tempMax > 50)
+        return [3, 5]; // mild: low/mid/high spread
+    if (tempMax > 35)
+        return [2, 4]; // cool: low-mid
+    return [2, 3]; // cold: mostly low
 }
 function windToDensity(windSpeed) {
     if (windSpeed <= 2)
@@ -168,7 +170,7 @@ function materialToNoteDuration(material) {
         case "crystal":
             return 2.0;
         case "steel":
-            return 0.4;
+            return 0.5;
     }
 }
 export function mapWeatherToAudio(day) {
