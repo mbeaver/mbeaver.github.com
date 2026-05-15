@@ -329,7 +329,8 @@
         if (nightness > 0) {
           for (let i = 0; i < 90; i++) {
             const sx = (i * 139.7 + 37) % W;
-            const sy = (i * 93.1 + 19) % (GND * 0.85);
+            const starSpan = GND * 0.85 - skyTop;
+            const sy = skyTop + (i * 93.1 + 19) % starSpan;
             const twk = 0.65 + 0.35 * Math.sin(t * 0.04 + i * 2.3);
             sk.fill(255, 255, 220, nightness * twk * 255);
             sk.noStroke();
@@ -843,9 +844,10 @@
         sk.pop();
       }
       function drawThermometerPortrait() {
+        const s = Math.max(0.7, Math.min(2, sk.windowWidth / 360));
         sk.push();
-        sk.translate(88, sk.windowHeight - STRIP_H - 148);
-        sk.scale(2);
+        sk.translate(88, sk.windowHeight - STRIP_H - 74 * s);
+        sk.scale(s);
         sk.translate(-759, -(GND - 93));
         const tx = 750;
         const ty = GND - 145;
@@ -889,9 +891,10 @@
         sk.pop();
       }
       function drawWindGaugePortrait() {
+        const s = Math.max(0.7, Math.min(2, sk.windowWidth / 360));
         sk.push();
-        sk.translate(sk.windowWidth - 88, sk.windowHeight - STRIP_H - 148);
-        sk.scale(2);
+        sk.translate(sk.windowWidth - 88, sk.windowHeight - STRIP_H - 74 * s);
+        sk.scale(s);
         sk.translate(-835, -(GND - 93));
         const tx = 750, ty = GND - 145, tH = 100;
         const panelT = ty - 22;
