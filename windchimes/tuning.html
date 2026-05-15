@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Windchimes — Tune</title>
+  <link rel="stylesheet" href="style.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "tone": "https://esm.sh/tone@15"
+      }
+    }
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <span class="site-title">WINDCHIMES</span>
+    <div class="site-right">
+      <a href="index.html" class="tune-back">← Back</a>
+      <span class="site-meta">Tuning</span>
+    </div>
+  </header>
+
+  <main class="tuning-layout">
+    <div class="tuning-top">
+      <div class="tuning-tile-wrap" id="tile-wrap"></div>
+      <div id="weather-controls"></div>
+    </div>
+
+    <section class="tuning-audio">
+      <div class="tuning-section-label">Audio Profile — <span id="profile-label">—</span></div>
+      <div id="audio-params"></div>
+    </section>
+
+    <div class="tuning-actions">
+      <button class="tuning-btn" id="play-btn">Play</button>
+      <button class="tuning-btn tuning-btn-copy" id="copy-btn">Copy for LLM</button>
+      <span class="tuning-copy-feedback" id="copy-feedback"></span>
+    </div>
+  </main>
+
+  <script type="module" src="dist/tuning.js"></script>
+</body>
+</html>
