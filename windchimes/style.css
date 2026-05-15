@@ -1,0 +1,286 @@
+/* ─── Reset & Base ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0d0f14;
+  --text: #e0e4ed;
+  --text-dim: #7a8090;
+  --border: rgba(255,255,255,0.06);
+  --border-hover: rgba(255,255,255,0.18);
+  --status-bg: rgba(13,15,20,0.96);
+  --status-border: rgba(255,255,255,0.08);
+  --font-mono: ui-monospace, 'Cascadia Code', 'Fira Mono', monospace;
+}
+
+html { font-size: 14px; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  min-height: 100vh;
+  padding-bottom: 60px; /* room for status bar */
+}
+
+/* ─── Header ───────────────────────────────────────────────────── */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 28px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.site-title {
+  font-size: 1.25rem;
+  letter-spacing: 0.25em;
+  font-weight: 700;
+}
+
+.site-meta {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  letter-spacing: 0.05em;
+}
+
+/* ─── Month Sections ───────────────────────────────────────────── */
+.month-section {
+  padding: 28px 28px 12px;
+}
+
+.month-label {
+  font-size: 0.9rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ─── Calendar Grid ────────────────────────────────────────────── */
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.cal-header-row {
+  display: contents;
+}
+
+.cal-day-header {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  padding: 4px 0 8px;
+  letter-spacing: 0.06em;
+}
+
+/* ─── Day Tiles ────────────────────────────────────────────────── */
+.day-tile {
+  position: relative;
+  min-height: 130px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  user-select: none;
+}
+
+.day-tile:hover {
+  border-color: var(--border-hover);
+  transform: translateY(-2px);
+}
+
+.day-tile.is-future {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.day-tile.is-empty {
+  border-color: transparent;
+  cursor: default;
+  pointer-events: none;
+  min-height: 130px;
+}
+
+.day-tile.is-playing {
+  animation: pulse-ring 2s ease-in-out infinite;
+}
+
+@keyframes pulse-ring {
+  0%, 100% { box-shadow: 0 0 0 2px #fff, 0 0 20px 4px rgba(255,255,255,0.08); }
+  50%       { box-shadow: 0 0 0 2px #fff, 0 0 20px 4px rgba(255,255,255,0.22); }
+}
+
+.tile-date {
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.tile-emoji {
+  font-size: 1.6rem;
+  line-height: 1;
+  text-align: center;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tile-temp {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.tile-wind {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.tile-precip {
+  font-size: 0.7rem;
+  color: #6aaff0;
+  text-align: center;
+}
+
+/* ─── Skeleton Loading ─────────────────────────────────────────── */
+.day-tile.is-skeleton {
+  pointer-events: none;
+  overflow: hidden;
+  background: rgba(255,255,255,0.04);
+  border-color: transparent;
+}
+
+.day-tile.is-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255,255,255,0.06) 50%,
+    transparent 100%
+  );
+  animation: shimmer 1.4s infinite;
+}
+
+@keyframes shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* ─── Status Bar ───────────────────────────────────────────────── */
+.status-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 48px;
+  background: var(--status-bg);
+  border-top: 1px solid var(--status-border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  transform: translateY(100%);
+  transition: transform 0.25s ease;
+  backdrop-filter: blur(8px);
+}
+
+.status-bar:not([hidden]) {
+  transform: translateY(0);
+}
+
+/* Animated waveform bars */
+.waveform {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 16px;
+}
+
+.waveform span {
+  display: block;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--text);
+  animation: wave 1.2s ease-in-out infinite;
+}
+
+.waveform span:nth-child(1) { animation-delay: 0.0s; height: 6px; }
+.waveform span:nth-child(2) { animation-delay: 0.2s; height: 10px; }
+.waveform span:nth-child(3) { animation-delay: 0.4s; height: 14px; }
+.waveform span:nth-child(4) { animation-delay: 0.2s; height: 10px; }
+.waveform span:nth-child(5) { animation-delay: 0.0s; height: 6px; }
+
+@keyframes wave {
+  0%, 100% { transform: scaleY(0.4); }
+  50%       { transform: scaleY(1.0); }
+}
+
+/* ─── Error / Hint States ──────────────────────────────────────── */
+.error-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 20px;
+}
+
+.click-hint {
+  position: fixed;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 8px 18px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+
+.click-hint.hidden { opacity: 0; }
+
+/* ─── Responsive Layout ────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .site-header { padding: 14px 16px; }
+  .month-section { padding: 20px 16px 8px; }
+  .day-tile { min-height: 110px; padding: 6px; }
+  .tile-emoji { font-size: 1.35rem; }
+  .tile-date { font-size: 0.9rem; }
+}
+
+@media (max-width: 680px) {
+  html { font-size: 13px; }
+  .site-header { padding: 12px 12px; }
+  .site-title { font-size: 1rem; letter-spacing: 0.15em; }
+  .month-section { padding: 16px 8px 6px; }
+  .cal-grid { gap: 2px; }
+  .day-tile { min-height: 90px; padding: 4px; gap: 2px; }
+  .tile-emoji { font-size: 1.1rem; }
+  .tile-date { font-size: 0.8rem; }
+  .tile-wind, .tile-precip { display: none; }
+  .cal-day-header { font-size: 0.65rem; padding-bottom: 4px; }
+  .click-hint { font-size: 0.72rem; padding: 6px 14px; }
+}
