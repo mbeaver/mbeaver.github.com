@@ -138,7 +138,8 @@
     new p5((sk) => {
       const W = 900, H = 560;
       const GND = H * 0.615;
-      let _sf = 1, _oy = 0;
+      let _sf = 1, _oy = 0, _ox = 0;
+      let _isPortrait = false;
       let temp = w.temp;
       let windSpeed = w.windSpeed;
       let windDir = w.windDir;
@@ -248,13 +249,13 @@
       };
       function sceneTransform() {
         const availH = sk.windowHeight - STRIP_H;
-        const isPortrait = sk.windowWidth / availH < 0.85;
-        const sfx = sk.windowWidth / (isPortrait ? 700 : W);
+        _isPortrait = sk.windowWidth / availH < 0.85;
+        const sfx = sk.windowWidth / (_isPortrait ? 700 : W);
         const sfy = availH / H;
         _sf = Math.min(sfx, sfy);
-        const ox = (sk.windowWidth - W * _sf) / 2;
-        _oy = isPortrait ? availH * 0.55 - GND * _sf : (availH - H * _sf) / 2;
-        sk.translate(ox, _oy);
+        _ox = (sk.windowWidth - W * _sf) / 2;
+        _oy = _isPortrait ? availH * 0.65 - GND * _sf : (availH - H * _sf) / 2;
+        sk.translate(_ox, _oy);
         sk.scale(_sf, _sf);
       }
       sk.draw = () => {
@@ -270,12 +271,18 @@
         drawTree(230, GND);
         drawTree(670, GND);
         drawHouse();
-        drawThermometer();
-        drawWindGauge();
+        if (!_isPortrait) {
+          drawThermometer();
+          drawWindGauge();
+        }
         drawGrassLayer();
         drawPrecipitation();
         if (season === "fall") drawGroundLeaves();
         sk.pop();
+        if (_isPortrait) {
+          drawThermometerPortrait();
+          drawWindGaugePortrait();
+        }
         drawForecastStrip();
       };
       function drawSky() {
@@ -340,11 +347,22 @@
       function drawCelestial() {
         const dayVisible = isDay === 1 && tod >= 6 && tod <= 20;
         const nightVisible = isDay === 0 || tod < 6 || tod > 20;
+        const cx = W / 2;
+        const sunR = 52, moonR = 19, margin = 8;
+        const visLeft = _ox < 0 ? -_ox / _sf : 0;
+        const visRight = _ox < 0 ? (sk.windowWidth - _ox) / _sf : W;
+        const sunRx = Math.min(W * 0.44, Math.min(
+          cx - visLeft - sunR - margin,
+          visRight - cx - sunR - margin
+        ));
+        const moonRx = Math.min(W * 0.4, Math.min(
+          cx - visLeft - moonR - margin,
+          visRight - cx - moonR - margin
+        ));
         if (dayVisible) {
           const prog = (tod - 6) / 14;
           const ang = sk.map(prog, 0, 1, sk.PI, 0);
-          const cx = W / 2;
-          const rx = W * 0.44, ry = GND * 0.84;
+          const rx = sunRx, ry = GND * 0.84;
           const sx = cx + rx * Math.cos(ang);
           const sy = GND - ry * Math.sin(ang);
           for (let r = 70; r > 0; r -= 8) {
@@ -374,8 +392,7 @@
           else prog = (tod + 4) / 12;
           prog = sk.constrain(prog, 0, 1);
           const ang = sk.map(prog, 0, 1, sk.PI, 0);
-          const cx = W / 2;
-          const rx = W * 0.4, ry = GND * 0.76;
+          const rx = moonRx, ry = GND * 0.76;
           const mx = cx + rx * Math.cos(ang);
           const my = GND - ry * Math.sin(ang);
           for (let r = 45; r > 0; r -= 7) {
@@ -825,6 +842,132 @@
         sk.text("mph", gx, panelT + panelH - 16);
         sk.pop();
       }
+      function drawThermometerPortrait() {
+        sk.push();
+        sk.translate(88, sk.windowHeight - STRIP_H - 148);
+        sk.scale(2);
+        sk.translate(-759, -(GND - 93));
+        const tx = 750;
+        const ty = GND - 145;
+        const tH = 100;
+        const tW = 16;
+        sk.fill(248, 244, 236, 200);
+        sk.stroke(180, 165, 145);
+        sk.strokeWeight(1);
+        sk.rect(tx - 20, ty - 22, 58, tH + 48, 5);
+        sk.fill(238, 228, 212);
+        sk.stroke(175, 158, 138);
+        sk.strokeWeight(1);
+        sk.rect(tx - tW / 2, ty, tW, tH, tW / 2, tW / 2, 0, 0);
+        sk.fill(198, 48, 48);
+        sk.stroke(155, 28, 28);
+        sk.strokeWeight(1);
+        sk.ellipse(tx, ty + tH + 8, 25, 25);
+        const mH = sk.map(sk.constrain(temp, -20, 120), -20, 120, 0, tH);
+        sk.fill(198, 48, 48);
+        sk.noStroke();
+        sk.rect(tx - tW / 2 + 2, ty + tH - mH, tW - 4, mH + 8, 2, 2, 0, 0);
+        sk.stroke(108, 88, 68);
+        sk.strokeWeight(1);
+        sk.fill(55, 38, 18);
+        sk.textSize(11);
+        sk.textAlign(sk.LEFT, sk.CENTER);
+        const labels = [-20, 0, 20, 40, 60, 80, 100, 120];
+        for (const tv of labels) {
+          const yt = ty + tH - sk.map(tv, -20, 120, 0, tH);
+          sk.stroke(108, 88, 68);
+          sk.line(tx + tW / 2, yt, tx + tW / 2 + 7, yt);
+          sk.noStroke();
+          sk.fill(55, 38, 18);
+          sk.text(tv, tx + tW / 2 + 9, yt);
+        }
+        sk.noStroke();
+        sk.fill(55, 38, 18);
+        sk.textSize(13);
+        sk.textAlign(sk.CENTER, sk.CENTER);
+        sk.text(`${Math.round(temp)}\xB0F`, tx, ty - 10);
+        sk.pop();
+      }
+      function drawWindGaugePortrait() {
+        sk.push();
+        sk.translate(sk.windowWidth - 88, sk.windowHeight - STRIP_H - 148);
+        sk.scale(2);
+        sk.translate(-835, -(GND - 93));
+        const tx = 750, ty = GND - 145, tH = 100;
+        const panelT = ty - 22;
+        const panelH = tH + 48;
+        const panelL = 796;
+        const panelW = 78;
+        const gx = panelL + panelW / 2;
+        const cr = 30;
+        const cy = panelT + 22 + cr;
+        sk.fill(248, 244, 236, 200);
+        sk.stroke(180, 165, 145);
+        sk.strokeWeight(1);
+        sk.rect(panelL, panelT, panelW, panelH, 5);
+        sk.noStroke();
+        sk.fill(55, 38, 18);
+        sk.textSize(11);
+        sk.textAlign(sk.CENTER, sk.TOP);
+        sk.text("WIND", gx, panelT + 6);
+        sk.fill(238, 228, 212);
+        sk.stroke(175, 158, 138);
+        sk.strokeWeight(1.2);
+        sk.ellipse(gx, cy, cr * 2, cr * 2);
+        sk.stroke(160, 140, 118);
+        sk.strokeWeight(1);
+        for (let deg = 0; deg < 360; deg += 45) {
+          const rad = sk.radians(deg - 90);
+          const inner = deg % 90 === 0 ? cr - 7 : cr - 4;
+          sk.line(
+            gx + Math.cos(rad) * inner,
+            cy + Math.sin(rad) * inner,
+            gx + Math.cos(rad) * cr,
+            cy + Math.sin(rad) * cr
+          );
+        }
+        sk.textSize(8);
+        sk.textAlign(sk.CENTER, sk.CENTER);
+        const cards = [["N", 0], ["E", 90], ["S", 180], ["W", 270]];
+        for (const [lbl, deg] of cards) {
+          const rad = sk.radians(deg - 90);
+          const dist = cr - 12;
+          const lx = gx + Math.cos(rad) * dist;
+          const ly = cy + Math.sin(rad) * dist;
+          sk.fill(0, 0, 0, 90);
+          sk.noStroke();
+          sk.text(lbl, lx + 0.5, ly + 0.5);
+          sk.fill(70, 50, 25);
+          sk.text(lbl, lx, ly);
+        }
+        const wobble = Math.sin(t * 0.05) * wf * 0.06;
+        const arrowAngle = sk.radians(windDir - 90) + wobble;
+        const tipX = gx + Math.cos(arrowAngle) * (cr - 6);
+        const tipY = cy + Math.sin(arrowAngle) * (cr - 6);
+        const tailX = gx - Math.cos(arrowAngle) * (cr * 0.38);
+        const tailY = cy - Math.sin(arrowAngle) * (cr * 0.38);
+        sk.stroke(175, 38, 38);
+        sk.strokeWeight(2.5);
+        sk.line(tailX, tailY, tipX, tipY);
+        sk.push();
+        sk.translate(tipX, tipY);
+        sk.rotate(arrowAngle);
+        sk.fill(175, 38, 38);
+        sk.noStroke();
+        sk.triangle(5, 0, -7, -4, -7, 4);
+        sk.pop();
+        sk.fill(140, 115, 90);
+        sk.noStroke();
+        sk.ellipse(gx, cy, 5, 5);
+        sk.noStroke();
+        sk.fill(55, 38, 18);
+        sk.textSize(16);
+        sk.textAlign(sk.CENTER, sk.CENTER);
+        sk.text(`${Math.round(windSpeed)}`, gx, panelT + panelH - 32);
+        sk.textSize(10);
+        sk.text("mph", gx, panelT + panelH - 16);
+        sk.pop();
+      }
       function drawGrassLayer() {
         for (const g of grass) {
           const sw = Math.sin(t * 0.042 + g.ph) * wf * 14;
@@ -872,9 +1015,10 @@
       }
       function mkParticle(scatter) {
         const driftX = -Math.sin(windRad) * wf * (isRain ? 3.5 : 1.5);
+        const precipTop = Math.floor(-Math.max(0, _oy) / _sf);
         return {
           x: scatter ? sk.random(W) : sk.random(-20, W + 20),
-          y: scatter ? sk.random(-H, 0) : -10,
+          y: scatter ? sk.random(precipTop, 0) : precipTop,
           spd: isRain ? sk.random(10, 18) : sk.random(1, 3.5),
           dx: driftX + (isSnow ? Math.sin(sk.random(sk.TWO_PI)) * 0.4 : 0),
           sz: isRain ? sk.random(1, 2) : sk.random(3.5, 8),
@@ -883,11 +1027,12 @@
       }
       function drawPrecipitation() {
         if (!particles.length) return;
+        const precipBot = Math.ceil(H + Math.max(0, _oy) / _sf);
         for (let i = particles.length - 1; i >= 0; i--) {
           const p = particles[i];
           p.y += p.spd;
           p.x += p.dx;
-          if (p.y > H || p.x < -20 || p.x > W + 20) {
+          if (p.y > precipBot || p.x < -20 || p.x > W + 20) {
             particles[i] = mkParticle(false);
             continue;
           }
