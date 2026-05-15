@@ -327,10 +327,10 @@
         sk.noStroke();
         const nightness = nightFactor();
         if (nightness > 0) {
+          const starSpan = Math.max(1, GND * 0.85 - skyTop);
           for (let i = 0; i < 90; i++) {
             const sx = (i * 139.7 + 37) % W;
-            const starSpan = GND * 0.85 - skyTop;
-            const sy = skyTop + (i * 93.1 + 19) % starSpan;
+            const sy = skyTop + (i * 317.4 + 83.7) % starSpan;
             const twk = 0.65 + 0.35 * Math.sin(t * 0.04 + i * 2.3);
             sk.fill(255, 255, 220, nightness * twk * 255);
             sk.noStroke();
