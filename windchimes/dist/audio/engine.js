@@ -38,11 +38,13 @@ export class AudioEngine {
                     const offset = i * (0.02 + Math.random() * 0.06); // 20–80 ms stagger
                     this.synthSet.triggerNote(midi, profile.noteDurationSec, time + offset);
                 }
+                this.onStrike?.(numNotes);
             }
             else {
                 const idx = Math.floor(Math.random() * profile.scale.length);
                 const midi = profile.scale[idx];
                 this.synthSet.triggerNote(midi, profile.noteDurationSec, time);
+                this.onStrike?.(1);
             }
         }, profile.tickIntervalMs / 1000);
         getTransport().start();

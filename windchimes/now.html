@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Windchimes · Now</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* Must come before display rules so hidden attribute always wins */
+    [hidden] { display: none !important; }
+
+    body { min-height: 100dvh; overflow-x: hidden; }
+
+    #particle-canvas {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    }
+
+    #loading-state, #error-state {
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      z-index: 2; gap: 12px;
+    }
+
+    /* City form: fixed strip at top of screen */
+    #city-form {
+      position: fixed; top: 0; left: 0; right: 0;
+      display: flex; flex-direction: row;
+      align-items: center; justify-content: center;
+      z-index: 3; gap: 8px;
+      padding: 12px 16px;
+      background: rgba(0,0,0,0.4); backdrop-filter: blur(8px);
+    }
+
+    #city-form input {
+      padding: 10px 16px; font-size: 1rem; border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08);
+      color: inherit; outline: none; width: min(260px, 60vw);
+    }
+    #city-form input::placeholder { opacity: 0.4; }
+    #city-form button { padding: 10px 20px; font-size: 0.9rem; white-space: nowrap; }
+    .city-error {
+      position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
+      font-size: 0.8rem; opacity: 0.9; color: #f87171;
+      background: rgba(0,0,0,0.6); padding: 6px 14px; border-radius: 4px;
+      z-index: 3; white-space: nowrap;
+    }
+
+    #error-state p { opacity: 0.7; margin-bottom: 12px; }
+
+    #weather-card {
+      position: relative; z-index: 1;
+      min-height: 100dvh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 8px; padding: 32px 24px; text-align: center;
+    }
+
+    #weather-emoji  { font-size: clamp(4rem, 15vw, 7rem); line-height: 1; }
+    #location-name  { font-size: clamp(0.9rem, 3vw, 1.1rem); opacity: 0.5; text-transform: uppercase; letter-spacing: 0.1em; }
+    #current-temp   { font-size: clamp(3rem, 12vw, 5rem); font-weight: 700; letter-spacing: -0.02em; }
+    #condition-label { font-size: clamp(0.85rem, 2.5vw, 1rem); opacity: 0.6; text-transform: uppercase; letter-spacing: 0.08em; }
+
+    #weather-details {
+      display: flex; flex-wrap: wrap; gap: 12px 20px; justify-content: center;
+      margin-top: 8px; font-size: clamp(0.75rem, 2.5vw, 0.85rem); opacity: 0.55;
+    }
+
+    #audio-profile-label { font-size: 0.75rem; opacity: 0.35; margin-top: 12px; letter-spacing: 0.06em; }
+
+    #play-btn { margin-top: 20px; padding: 14px 40px; font-size: 0.9rem; letter-spacing: 0.12em; text-transform: uppercase; }
+  </style>
+  <script type="importmap">{ "imports": { "tone": "https://esm.sh/tone@15" } }</script>
+</head>
+<body>
+
+  <canvas id="particle-canvas"></canvas>
+
+  <form id="city-form" hidden>
+    <input id="city-input" type="text" placeholder="Enter city name" autocomplete="off" />
+    <button type="submit">Go</button>
+  </form>
+
+  <div id="loading-state">Locating…</div>
+
+  <div id="error-state" hidden></div>
+
+  <div id="weather-card" hidden>
+    <div id="weather-emoji"></div>
+    <div id="location-name"></div>
+    <div id="current-temp"></div>
+    <div id="condition-label"></div>
+    <div id="weather-details"></div>
+    <div id="audio-profile-label"></div>
+    <button id="play-btn">Play Chimes</button>
+  </div>
+
+  <script type="module" src="dist/now.js"></script>
+</body>
+</html>
