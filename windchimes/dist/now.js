@@ -1,6 +1,16 @@
 import { wmoEmoji } from './ui/tile.js';
 import { mapWeatherToAudio } from './audio/mapping.js';
-// ── Utilities ────────────────────────────────────────────────────────────────
+// ── Module-level state ────────────────────────────────────────────────────────
+let canvas;
+let ctx;
+let burstParticles = [];
+let ambientParticles = [];
+let lightningAlpha = 0;
+let lastLightningCheck = 0;
+let animFrameId = null;
+let engine = null;
+let playing = false;
+// ── Utilities ─────────────────────────────────────────────────────────────────
 function degreesToCompass(deg) {
     const dirs = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
     return dirs[Math.round(deg / 22.5) % 16];
@@ -35,11 +45,53 @@ const WMO_LABELS = {
 function wmoConditionLabel(code) {
     return WMO_LABELS[code] ?? 'Unknown';
 }
+function nowEmoji(code, isNight) {
+    if (isNight && code <= 1)
+        return '🌙';
+    return wmoEmoji(code);
+}
 function materialHue(material) {
     const hues = {
         crystal: 200, glass: 180, aluminum: 210, bronze: 35, bamboo: 90, steel: 260,
     };
     return hues[material];
+}
+function classifyCondition(code) {
+    if (code <= 1)
+        return 'clear';
+    if (code <= 3)
+        return 'partlyCloudy';
+    if (code >= 45 && code <= 48)
+        return 'fog';
+    if (code >= 51 && code <= 57)
+        return 'drizzle';
+    if ((code >= 61 && code <= 67) || (code >= 80 && code <= 82))
+        return 'rain';
+    if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86))
+        return 'snow';
+    if (code === 95)
+        return 'storm';
+    if (code === 96 || code === 99)
+        return 'hail';
+    return 'clear';
+}
+function parseColor(c) {
+    if (c.startsWith('#')) {
+        const v = parseInt(c.slice(1), 16);
+        return [(v >> 16) & 0xff, (v >> 8) & 0xff, v & 0xff];
+    }
+    const m = c.match(/\d+/g);
+    return m ? [+m[0], +m[1], +m[2]] : [0, 0, 0];
+}
+function lerpColor(a, b, t) {
+    const [ar, ag, ab] = parseColor(a);
+    const [br, bg, bb] = parseColor(b);
+    return `rgb(${Math.round(ar + (br - ar) * t)},${Math.round(ag + (bg - ag) * t)},${Math.round(ab + (bb - ab) * t)})`;
+}
+function windVector(day) {
+    const toRad = ((day.windDirection + 180) % 360) * (Math.PI / 180);
+    const strength = Math.min(day.windSpeedMax / 40, 1.0);
+    return { vx: Math.sin(toRad) * strength, vy: -Math.cos(toRad) * strength, strength };
 }
 // ── API ───────────────────────────────────────────────────────────────────────
 async function tryGeolocation() {
@@ -72,7 +124,7 @@ async function fetchForecast(lat, lng) {
         latitude: String(lat),
         longitude: String(lng),
         current: 'weather_code,temperature_2m,wind_speed_10m,wind_direction_10m,relative_humidity_2m,cloud_cover',
-        daily: 'temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,wind_direction_10m_dominant,cloud_cover_mean,relative_humidity_2m_max',
+        daily: 'temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,wind_direction_10m_dominant,cloud_cover_mean,relative_humidity_2m_max,sunrise,sunset',
         forecast_days: '1',
         temperature_unit: 'fahrenheit',
         wind_speed_unit: 'mph',
@@ -95,70 +147,357 @@ async function fetchForecast(lat, lng) {
         windSpeedMax: d.wind_speed_10m_max[0],
         humidityMax: d.relative_humidity_2m_max[0],
         precipSum: d.precipitation_sum[0],
+        sunrise: new Date(d.sunrise[0]),
+        sunset: new Date(d.sunset[0]),
     };
     return { day, currentTemp: cur.temperature_2m };
 }
-let particles = [];
-let canvas;
-let ctx;
-function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+// ── Sky Gradient ──────────────────────────────────────────────────────────────
+const SKY_PHASES = {
+    night: { top: '#030408', bottom: '#07090f' },
+    dawn: { top: '#1a0a2e', bottom: '#3d1c52' },
+    sunrise: { top: '#ff6b35', bottom: '#ffc947' },
+    morning: { top: '#4a8fd4', bottom: '#87ceeb' },
+    day: { top: '#1a6bbf', bottom: '#63b3ed' },
+    afternoon: { top: '#2d5fa0', bottom: '#f0a855' },
+    goldenHour: { top: '#c4682a', bottom: '#f5c842' },
+    dusk: { top: '#1a1a3a', bottom: '#4a2060' },
+};
+const CONDITION_MODS = {
+    storm: { color: '#1a1520', weight: 0.60 },
+    hail: { color: '#1a1520', weight: 0.60 },
+    fog: { color: '#b0b4bc', weight: 0.50 },
+    snow: { color: '#d8e8f0', weight: 0.35 },
+    rain: { color: '#2a3a4a', weight: 0.40 },
+    drizzle: { color: '#3a4a5a', weight: 0.25 },
+    partlyCloudy: { color: '#6a7a8a', weight: 0.15 },
+};
+function updateSkyGradient(day, condition) {
+    const now = Date.now();
+    const sr = day.sunrise.getTime();
+    const ss = day.sunset.getTime();
+    const m = 60000;
+    let from = 'night', to = 'night', t = 0;
+    if (now >= ss + 60 * m || now < sr - 60 * m) {
+        // Full night — defaults already set
+    }
+    else if (now >= ss) {
+        from = 'goldenHour';
+        to = 'dusk';
+        t = (now - ss) / (60 * m);
+    }
+    else if (now >= ss - 30 * m) {
+        from = 'afternoon';
+        to = 'goldenHour';
+        t = (now - (ss - 30 * m)) / (30 * m);
+    }
+    else if (now >= ss - 3 * 60 * m) {
+        from = 'day';
+        to = 'afternoon';
+        t = (now - (ss - 3 * 60 * m)) / (2.5 * 60 * m);
+    }
+    else if (now >= sr + 3 * 60 * m) {
+        // Stable day — quick morning→day transition then hold
+        from = 'morning';
+        to = 'day';
+        t = Math.min(1, (now - (sr + 3 * 60 * m)) / (60 * m));
+    }
+    else if (now >= sr + 30 * m) {
+        from = 'sunrise';
+        to = 'morning';
+        t = (now - (sr + 30 * m)) / (2.5 * 60 * m);
+    }
+    else if (now >= sr) {
+        from = 'dawn';
+        to = 'sunrise';
+        t = (now - sr) / (30 * m);
+    }
+    else {
+        from = 'night';
+        to = 'dawn';
+        t = (now - (sr - 60 * m)) / (60 * m);
+    }
+    t = Math.max(0, Math.min(1, t));
+    const p1 = SKY_PHASES[from];
+    const p2 = SKY_PHASES[to];
+    let top = lerpColor(p1.top, p2.top, t);
+    let bot = lerpColor(p1.bottom, p2.bottom, t);
+    const mod = CONDITION_MODS[condition];
+    if (mod) {
+        top = lerpColor(top, mod.color, mod.weight);
+        bot = lerpColor(bot, mod.color, mod.weight);
+    }
+    document.body.style.background = `linear-gradient(to bottom, ${top}, ${bot})`;
 }
+// ── Ambient Particles ─────────────────────────────────────────────────────────
+function ambientTargetCount(day, condition) {
+    switch (condition) {
+        case 'rain': return Math.min(200, 100 + Math.round(day.precipSum * 40));
+        case 'drizzle': return Math.min(120, 50 + Math.round(day.precipSum * 60));
+        case 'snow': {
+            const showers = day.weatherCode >= 85;
+            return showers
+                ? 40 + Math.floor(Math.random() * 31)
+                : 60 + Math.floor(Math.random() * 41);
+        }
+        case 'hail': return 30 + Math.floor(Math.random() * 31);
+        case 'fog': return 15 + Math.floor(Math.random() * 11);
+        case 'storm': return 180;
+        case 'clear':
+            return day.windSpeedMax > 20 ? Math.min(30, Math.floor(day.windSpeedMax / 5)) : 0;
+        case 'partlyCloudy':
+            return day.windSpeedMax > 20 ? Math.min(15, Math.floor(day.windSpeedMax / 5)) : 0;
+        default: return 0;
+    }
+}
+function spawnEdgeCoords(wv) {
+    const w = canvas.width, h = canvas.height;
+    const ax = Math.abs(wv.vx), ay = Math.abs(wv.vy);
+    if (ax < 0.05 && ay < 0.05)
+        return { x: Math.random() * w, y: Math.random() * h };
+    if (ax > 0.05 && ay > 0.05) {
+        if (Math.random() < ax / (ax + ay)) {
+            return { x: wv.vx > 0 ? -20 : w + 20, y: Math.random() * h };
+        }
+        return { x: Math.random() * w, y: wv.vy > 0 ? -20 : h + 20 };
+    }
+    if (ax > ay)
+        return { x: wv.vx > 0 ? -20 : w + 20, y: Math.random() * h };
+    return { x: Math.random() * w, y: wv.vy > 0 ? -20 : h + 20 };
+}
+function createAmbientParticle(condition, weatherCode, wv, prePopulate) {
+    const w = canvas.width, h = canvas.height;
+    const base = prePopulate ? { x: Math.random() * w, y: Math.random() * h } : spawnEdgeCoords(wv);
+    if (condition === 'fog') {
+        return { ...base, vx: wv.vx * 0.3, vy: wv.vy * 0.3,
+            alpha: 0.04 + Math.random() * 0.06, type: 'fog',
+            radius: 80 + Math.random() * 120 };
+    }
+    if (condition === 'snow') {
+        const showers = weatherCode >= 85;
+        const pvx = wv.vx * 2;
+        const pvy = wv.vy * 2 + (showers ? 1.5 : 0.8);
+        return { ...base, vx: pvx, vy: pvy,
+            alpha: 0.6 + Math.random() * 0.3, type: 'snow',
+            radius: (showers ? 3 : 2) + Math.random() * (showers ? 4 : 3),
+            wobble: Math.random() * Math.PI * 2,
+            wobbleAmp: 0.03 + Math.random() * 0.05 };
+    }
+    if (condition === 'hail') {
+        const pvx = wv.vx * 10;
+        const pvy = wv.vy * 10 + 12;
+        return { ...base, vx: pvx, vy: pvy,
+            alpha: 0.55 + Math.random() * 0.30, type: 'hail',
+            radius: 3 + Math.random() * 3 };
+    }
+    if (condition === 'drizzle') {
+        const pvx = wv.vx * 5;
+        const pvy = wv.vy * 5 + 3;
+        return { ...base, vx: pvx, vy: pvy,
+            alpha: 0.20 + Math.random() * 0.25, type: 'rain',
+            length: 8 + Math.random() * 10,
+            angle: Math.atan2(pvy, pvx) };
+    }
+    if (condition === 'rain' || condition === 'storm') {
+        const pvx = wv.vx * 8;
+        const pvy = wv.vy * 8 + 6;
+        return { ...base, vx: pvx, vy: pvy,
+            alpha: 0.35 + Math.random() * 0.30, type: 'rain',
+            length: 15 + Math.random() * 20,
+            angle: Math.atan2(pvy, pvx) };
+    }
+    // clear / partlyCloudy — wind streaks
+    const pvx = wv.vx * 12;
+    const pvy = wv.vy * 12;
+    return { ...base, vx: pvx, vy: pvy,
+        alpha: 0.06 + Math.random() * 0.12, type: 'windstreak',
+        length: 40 + Math.random() * 80,
+        angle: Math.atan2(pvy, pvx) };
+}
+function wrapAmbientParticle(p) {
+    const { width: w, height: h } = canvas;
+    const pad = 25;
+    if (p.x > w + pad) {
+        p.x = -pad;
+        p.y = Math.random() * h;
+    }
+    else if (p.x < -pad) {
+        p.x = w + pad;
+        p.y = Math.random() * h;
+    }
+    else if (p.y > h + pad) {
+        p.y = -pad;
+        p.x = Math.random() * w;
+    }
+    else if (p.y < -pad) {
+        p.y = h + pad;
+        p.x = Math.random() * w;
+    }
+}
+function initAmbientParticles(day, condition) {
+    ambientParticles = [];
+    const wv = windVector(day);
+    const target = ambientTargetCount(day, condition);
+    for (let i = 0; i < target; i++) {
+        const prePopulate = i < Math.floor(target / 2);
+        ambientParticles.push(createAmbientParticle(condition, day.weatherCode, wv, prePopulate));
+    }
+}
+function tickAmbientParticles() {
+    const now = performance.now();
+    for (const p of ambientParticles) {
+        if (p.type === 'snow' && p.wobble !== undefined && p.wobbleAmp !== undefined) {
+            p.vx += Math.sin(now * 0.002 + p.wobble) * p.wobbleAmp;
+        }
+        p.x += p.vx;
+        p.y += p.vy;
+        wrapAmbientParticle(p);
+    }
+}
+function drawAmbientParticles(condition) {
+    if (condition === 'fog') {
+        ctx.fillStyle = 'rgba(160,165,175,0.12)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    for (const p of ambientParticles) {
+        switch (p.type) {
+            case 'rain': {
+                const isD = condition === 'drizzle';
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.angle ?? Math.PI / 2);
+                ctx.fillStyle = `rgba(${isD ? '180,215,255' : '150,200,255'},${p.alpha})`;
+                const lw = isD ? 1 : 1.5;
+                ctx.fillRect(-(p.length ?? 20) / 2, -lw / 2, p.length ?? 20, lw);
+                ctx.restore();
+                break;
+            }
+            case 'snow': {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius ?? 3, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255,255,255,${p.alpha})`;
+                ctx.fill();
+                break;
+            }
+            case 'hail': {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius ?? 4, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(200,230,255,${p.alpha})`;
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                ctx.restore();
+                break;
+            }
+            case 'fog': {
+                const r = p.radius ?? 120;
+                const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+                grad.addColorStop(0, `rgba(180,185,195,${p.alpha})`);
+                grad.addColorStop(1, 'rgba(180,185,195,0)');
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+                ctx.fillStyle = grad;
+                ctx.fill();
+                break;
+            }
+            case 'windstreak': {
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.angle ?? 0);
+                ctx.strokeStyle = `rgba(255,255,255,${p.alpha})`;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(-(p.length ?? 60) / 2, 0);
+                ctx.lineTo((p.length ?? 60) / 2, 0);
+                ctx.stroke();
+                ctx.restore();
+                break;
+            }
+        }
+    }
+}
+// ── Lightning ─────────────────────────────────────────────────────────────────
+function drawLightningFlash(condition) {
+    const now = Date.now();
+    if ((condition === 'storm' || condition === 'hail') && now - lastLightningCheck > 1000) {
+        lastLightningCheck = now;
+        if (Math.random() < 0.20) {
+            lightningAlpha = 0.85 + Math.random() * 0.15;
+        }
+    }
+    if (lightningAlpha > 0.001) {
+        ctx.fillStyle = `rgba(220,230,255,${lightningAlpha})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        lightningAlpha *= 0.82;
+    }
+}
+// ── Burst Particles ───────────────────────────────────────────────────────────
 function spawnBurst(noteCount, day, hue) {
     const cx = canvas.width / 2;
     const cy = canvas.height / 2;
     const count = noteCount * (4 + Math.floor(Math.random() * 5));
     for (let i = 0; i < count; i++) {
         const angle = Math.random() * Math.PI * 2;
-        const speed = 1.5 + Math.random() * 3.5;
-        particles.push({
+        const speed = 0.6 + Math.random() * 1.5;
+        burstParticles.push({
             x: cx + (Math.random() - 0.5) * 40,
             y: cy + (Math.random() - 0.5) * 40,
             vx: Math.cos(angle) * speed,
             vy: Math.sin(angle) * speed,
             radius: 2 + Math.random() * 4,
             alpha: 0.7 + Math.random() * 0.3,
-            decay: 0.008 + Math.random() * 0.012,
+            decay: 0.003 + Math.random() * 0.004,
             hue: hue + (Math.random() - 0.5) * 30,
         });
     }
 }
-function tickParticles(day) {
-    const windRad = ((day.windDirection + 180) % 360) * (Math.PI / 180);
-    const windStrength = Math.min(day.windSpeedMax / 40, 0.8);
-    const driftX = Math.sin(windRad) * windStrength * 0.15;
-    const driftY = -Math.cos(windRad) * windStrength * 0.15;
-    for (const p of particles) {
-        p.vx = (p.vx + driftX) * 0.98;
-        p.vy = (p.vy + driftY) * 0.98;
+function tickBurstParticles(day) {
+    const wv = windVector(day);
+    const driftX = wv.vx * 0.5;
+    const driftY = wv.vy * 0.5;
+    for (const p of burstParticles) {
+        p.vx = (p.vx + driftX) * 0.985;
+        p.vy = (p.vy + driftY) * 0.985;
         p.x += p.vx;
         p.y += p.vy;
         p.alpha -= p.decay;
     }
-    particles = particles.filter((p) => p.alpha > 0);
+    burstParticles = burstParticles.filter((p) => p.alpha > 0);
 }
-function drawParticles() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    for (const p of particles) {
+function drawBurstParticles() {
+    for (const p of burstParticles) {
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-        ctx.fillStyle = `hsla(${p.hue}, 70%, 80%, ${p.alpha})`;
+        ctx.fillStyle = `hsla(${p.hue},70%,80%,${p.alpha})`;
         ctx.fill();
     }
 }
-function startRenderLoop(day) {
+// ── Canvas + Render Loop ──────────────────────────────────────────────────────
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+function startRenderLoop(day, condition) {
+    if (animFrameId !== null)
+        cancelAnimationFrame(animFrameId);
     function frame() {
-        tickParticles(day);
-        drawParticles();
-        requestAnimationFrame(frame);
+        updateSkyGradient(day, condition);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        tickAmbientParticles();
+        drawAmbientParticles(condition);
+        drawLightningFlash(condition);
+        tickBurstParticles(day);
+        drawBurstParticles();
+        animFrameId = requestAnimationFrame(frame);
     }
-    requestAnimationFrame(frame);
+    animFrameId = requestAnimationFrame(frame);
 }
 // ── Display ───────────────────────────────────────────────────────────────────
-function displayWeather(day, currentTemp, locationName, profile) {
+function displayWeather(day, currentTemp, locationName, profile, isNight) {
     const get = (id) => document.getElementById(id);
-    get('weather-emoji').textContent = wmoEmoji(day.weatherCode);
+    get('weather-emoji').textContent = nowEmoji(day.weatherCode, isNight);
     get('location-name').textContent = locationName;
     get('current-temp').textContent = `${Math.round(currentTemp)}°`;
     get('condition-label').textContent = wmoConditionLabel(day.weatherCode);
@@ -174,41 +513,50 @@ function displayWeather(day, currentTemp, locationName, profile) {
     get('loading-state').setAttribute('hidden', '');
     get('weather-card').removeAttribute('hidden');
 }
-// ── City fallback ─────────────────────────────────────────────────────────────
-function promptCityFallback() {
-    return new Promise((resolve, reject) => {
-        const loadingEl = document.getElementById('loading-state');
-        const form = document.getElementById('city-form');
-        const input = document.getElementById('city-input');
-        loadingEl.setAttribute('hidden', '');
-        form.removeAttribute('hidden');
-        let errorEl = form.querySelector('.city-error');
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const name = input.value.trim();
-            if (!name)
-                return;
-            if (errorEl)
-                errorEl.remove();
-            try {
-                const result = await geocodeCity(name);
-                form.setAttribute('hidden', '');
-                resolve(result);
-            }
-            catch {
-                errorEl = document.createElement('div');
-                errorEl.className = 'city-error';
-                errorEl.textContent = `City "${name}" not found. Try again.`;
-                form.appendChild(errorEl);
-            }
-        });
-    });
-}
 function showError(message) {
     document.getElementById('loading-state').setAttribute('hidden', '');
     const errorEl = document.getElementById('error-state');
     errorEl.innerHTML = `<p>${message}</p><button onclick="location.reload()">Retry</button>`;
     errorEl.removeAttribute('hidden');
+}
+// ── Location Loading ──────────────────────────────────────────────────────────
+async function loadLocation(lat, lng, locationName) {
+    document.getElementById('loading-state').removeAttribute('hidden');
+    document.getElementById('weather-card').setAttribute('hidden', '');
+    document.getElementById('city-form').setAttribute('hidden', '');
+    const { day, currentTemp } = await fetchForecast(lat, lng);
+    const profile = mapWeatherToAudio(day);
+    const hue = materialHue(profile.material);
+    const condition = classifyCondition(day.weatherCode);
+    const isNight = Date.now() < day.sunrise.getTime() || Date.now() > day.sunset.getTime();
+    if (playing && engine) {
+        engine.stop();
+        playing = false;
+    }
+    displayWeather(day, currentTemp, locationName, profile, isNight);
+    initAmbientParticles(day, condition);
+    startRenderLoop(day, condition);
+    const oldBtn = document.getElementById('play-btn');
+    const btn = oldBtn.cloneNode(true);
+    oldBtn.parentNode.replaceChild(btn, oldBtn);
+    btn.textContent = 'Play Chimes';
+    btn.addEventListener('click', async () => {
+        if (!playing) {
+            if (!engine) {
+                const { AudioEngine } = await import('./audio/engine.js');
+                engine = new AudioEngine();
+            }
+            engine.onStrike = (n) => spawnBurst(n, day, hue);
+            await engine.start(profile);
+            btn.textContent = 'Stop Chimes';
+            playing = true;
+        }
+        else {
+            engine.stop();
+            btn.textContent = 'Play Chimes';
+            playing = false;
+        }
+    });
 }
 // ── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
@@ -216,51 +564,60 @@ async function init() {
     ctx = canvas.getContext('2d');
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
-    let lat, lng, locationName;
-    try {
+    const form = document.getElementById('city-form');
+    const input = document.getElementById('city-input');
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = input.value.trim();
+        if (!name)
+            return;
+        const existingError = form.querySelector('.city-error');
+        if (existingError)
+            existingError.remove();
+        let result;
         try {
-            const pos = await tryGeolocation();
-            lat = pos.lat;
-            lng = pos.lng;
-            locationName = await reverseGeocode(lat, lng);
+            result = await geocodeCity(name);
         }
         catch {
-            const fallback = await promptCityFallback();
-            lat = fallback.lat;
-            lng = fallback.lng;
-            locationName = fallback.name;
+            const errorEl = document.createElement('div');
+            errorEl.className = 'city-error';
+            errorEl.textContent = `City "${name}" not found. Try again.`;
+            form.appendChild(errorEl);
+            return;
         }
-        const { day, currentTemp } = await fetchForecast(lat, lng);
-        const profile = mapWeatherToAudio(day);
-        const hue = materialHue(profile.material);
-        displayWeather(day, currentTemp, locationName, profile);
-        startRenderLoop(day);
-        const btn = document.getElementById('play-btn');
-        let playing = false;
-        let engine = null;
-        btn.addEventListener('click', async () => {
-            if (!playing) {
-                if (!engine) {
-                    // Dynamic import so Tone.js only loads (and AudioContext only creates)
-                    // after an explicit user gesture, satisfying browser autoplay policy.
-                    const { AudioEngine } = await import('./audio/engine.js');
-                    engine = new AudioEngine();
-                    engine.onStrike = (n) => spawnBurst(n, day, hue);
-                }
-                await engine.start(profile);
-                btn.textContent = 'Stop Chimes';
-                playing = true;
-            }
-            else {
-                engine.stop();
-                btn.textContent = 'Play Chimes';
-                playing = false;
-            }
-        });
+        try {
+            await loadLocation(result.lat, result.lng, result.name);
+        }
+        catch {
+            showError('Could not load weather data. Check your connection and try again.');
+        }
+    });
+    document.getElementById('change-location-btn').addEventListener('click', () => {
+        if (playing && engine) {
+            engine.stop();
+            playing = false;
+        }
+        document.getElementById('weather-card').setAttribute('hidden', '');
+        document.getElementById('loading-state').setAttribute('hidden', '');
+        input.value = '';
+        const existingError = form.querySelector('.city-error');
+        if (existingError)
+            existingError.remove();
+        form.removeAttribute('hidden');
+    });
+    try {
+        const pos = await tryGeolocation();
+        const name = await reverseGeocode(pos.lat, pos.lng);
+        try {
+            await loadLocation(pos.lat, pos.lng, name);
+        }
+        catch {
+            showError('Could not load weather data. Check your connection and try again.');
+        }
     }
-    catch (err) {
-        showError('Could not load weather data. Check your connection and try again.');
-        console.error(err);
+    catch {
+        document.getElementById('loading-state').setAttribute('hidden', '');
+        form.removeAttribute('hidden');
     }
 }
 init();
