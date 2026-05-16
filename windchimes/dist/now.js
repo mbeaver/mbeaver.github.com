@@ -5,6 +5,13 @@ let canvas;
 let ctx;
 let burstParticles = [];
 let ambientParticles = [];
+let shootingStars = [];
+let ufoActive = null;
+let isNightClear = false;
+let lastShootingStarTime = 0;
+let nextShootingStarDelay = 0;
+let lastUfoTime = 0;
+let nextUfoDelay = 0;
 let lightningAlpha = 0;
 let lastLightningCheck = 0;
 let animFrameId = null;
@@ -88,6 +95,12 @@ function lerpColor(a, b, t) {
     const [br, bg, bb] = parseColor(b);
     return `rgb(${Math.round(ar + (br - ar) * t)},${Math.round(ag + (bg - ag) * t)},${Math.round(ab + (bb - ab) * t)})`;
 }
+function parseLocalToUTC(dateStr, utcOffsetSeconds) {
+    // Open-Meteo returns local times without timezone designator (e.g. "2026-05-15T05:55").
+    // Appending Z treats the string as UTC; then subtracting the location offset converts
+    // it to the true UTC instant. E.g. 05:55 HST (offset=-36000): 05:55Z - (-36000s) = 15:55Z.
+    return new Date(new Date(dateStr + 'Z').getTime() - utcOffsetSeconds * 1000);
+}
 function windVector(day) {
     const toRad = ((day.windDirection + 180) % 360) * (Math.PI / 180);
     const strength = Math.min(day.windSpeedMax / 40, 1.0);
@@ -137,6 +150,7 @@ async function fetchForecast(lat, lng) {
     const data = await res.json();
     const cur = data.current;
     const d = data.daily;
+    const utcOffset = data.utc_offset_seconds ?? 0;
     const day = {
         date: d.time[0],
         weatherCode: cur.weather_code,
@@ -147,8 +161,8 @@ async function fetchForecast(lat, lng) {
         windSpeedMax: d.wind_speed_10m_max[0],
         humidityMax: d.relative_humidity_2m_max[0],
         precipSum: d.precipitation_sum[0],
-        sunrise: new Date(d.sunrise[0]),
-        sunset: new Date(d.sunset[0]),
+        sunrise: parseLocalToUTC(d.sunrise[0], utcOffset),
+        sunset: parseLocalToUTC(d.sunset[0], utcOffset),
     };
     return { day, currentTemp: cur.temperature_2m };
 }
@@ -158,7 +172,7 @@ const SKY_PHASES = {
     dawn: { top: '#1a0a2e', bottom: '#3d1c52' },
     sunrise: { top: '#ff6b35', bottom: '#ffc947' },
     morning: { top: '#4a8fd4', bottom: '#87ceeb' },
-    day: { top: '#1a6bbf', bottom: '#63b3ed' },
+    day: { top: '#2a82d4', bottom: '#87ceef' },
     afternoon: { top: '#2d5fa0', bottom: '#f0a855' },
     goldenHour: { top: '#c4682a', bottom: '#f5c842' },
     dusk: { top: '#1a1a3a', bottom: '#4a2060' },
@@ -168,9 +182,9 @@ const CONDITION_MODS = {
     hail: { color: '#1a1520', weight: 0.60 },
     fog: { color: '#b0b4bc', weight: 0.50 },
     snow: { color: '#d8e8f0', weight: 0.35 },
-    rain: { color: '#2a3a4a', weight: 0.40 },
+    rain: { color: '#2a3a4a', weight: 0.30 },
     drizzle: { color: '#3a4a5a', weight: 0.25 },
-    partlyCloudy: { color: '#6a7a8a', weight: 0.15 },
+    partlyCloudy: { color: '#6a7a8a', weight: 0.10 },
 };
 function updateSkyGradient(day, condition) {
     const now = Date.now();
@@ -334,18 +348,51 @@ function wrapAmbientParticle(p) {
         p.x = Math.random() * w;
     }
 }
-function initAmbientParticles(day, condition) {
+function initAmbientParticles(day, condition, nightClear) {
     ambientParticles = [];
+    shootingStars = [];
+    ufoActive = null;
+    isNightClear = nightClear;
     const wv = windVector(day);
     const target = ambientTargetCount(day, condition);
     for (let i = 0; i < target; i++) {
         const prePopulate = i < Math.floor(target / 2);
         ambientParticles.push(createAmbientParticle(condition, day.weatherCode, wv, prePopulate));
     }
+    if (isNightClear) {
+        const w = canvas.width, h = canvas.height;
+        const starCount = 160;
+        for (let i = 0; i < starCount; i++) {
+            const baseAlpha = 0.4 + Math.random() * 0.6;
+            const r = Math.random();
+            // Most stars small, a few larger
+            const radius = r < 0.7 ? 0.5 + Math.random() * 0.8 : r < 0.93 ? 1.2 + Math.random() * 0.8 : 2 + Math.random() * 0.8;
+            ambientParticles.push({
+                x: Math.random() * w,
+                y: Math.random() * h * 0.85, // stars in upper 85% of sky
+                vx: 0, vy: 0,
+                alpha: baseAlpha,
+                baseAlpha,
+                type: 'star',
+                radius,
+                phase: Math.random() * Math.PI * 2,
+                twinkleSpeed: 0.0005 + Math.random() * 0.002,
+            });
+        }
+        const now = Date.now();
+        lastShootingStarTime = now;
+        nextShootingStarDelay = 12000 + Math.random() * 10000;
+        lastUfoTime = now;
+        nextUfoDelay = 45000 + Math.random() * 45000;
+    }
 }
 function tickAmbientParticles() {
     const now = performance.now();
     for (const p of ambientParticles) {
+        if (p.type === 'star') {
+            p.alpha = (p.baseAlpha ?? 0.7) * (0.55 + 0.45 * Math.sin(p.phase + now * p.twinkleSpeed));
+            continue;
+        }
         if (p.type === 'snow' && p.wobble !== undefined && p.wobbleAmp !== undefined) {
             p.vx += Math.sin(now * 0.002 + p.wobble) * p.wobbleAmp;
         }
@@ -415,6 +462,24 @@ function drawAmbientParticles(condition) {
                 ctx.restore();
                 break;
             }
+            case 'star': {
+                const r = p.radius ?? 1;
+                if (r > 1.5) {
+                    // Larger stars get a soft glow
+                    const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 3);
+                    grad.addColorStop(0, `rgba(255,255,240,${p.alpha})`);
+                    grad.addColorStop(1, 'rgba(255,255,240,0)');
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, r * 3, 0, Math.PI * 2);
+                    ctx.fillStyle = grad;
+                    ctx.fill();
+                }
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255,255,245,${p.alpha})`;
+                ctx.fill();
+                break;
+            }
         }
     }
 }
@@ -432,6 +497,155 @@ function drawLightningFlash(condition) {
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         lightningAlpha *= 0.82;
     }
+}
+// ── Shooting Stars & UFO ──────────────────────────────────────────────────────
+function spawnShootingStar() {
+    const w = canvas.width, h = canvas.height;
+    // Start from top-left quadrant, travel down-right at a shallow diagonal
+    const angle = (Math.PI / 6) + Math.random() * (Math.PI / 6); // 30°–60° below horizontal
+    const x = Math.random() * w * 0.7;
+    const y = Math.random() * h * 0.4;
+    shootingStars.push({
+        x, y,
+        angle,
+        speed: 14 + Math.random() * 10,
+        length: 80 + Math.random() * 120,
+        alpha: 0.9 + Math.random() * 0.1,
+        done: false,
+    });
+}
+function tickShootingStars() {
+    for (const s of shootingStars) {
+        s.x += Math.cos(s.angle) * s.speed;
+        s.y += Math.sin(s.angle) * s.speed;
+        s.alpha -= 0.018;
+        if (s.alpha <= 0 || s.x > canvas.width + 50 || s.y > canvas.height + 50)
+            s.done = true;
+    }
+    shootingStars = shootingStars.filter((s) => !s.done);
+    if (isNightClear) {
+        const now = Date.now();
+        if (now - lastShootingStarTime > nextShootingStarDelay) {
+            spawnShootingStar();
+            lastShootingStarTime = now;
+            nextShootingStarDelay = 12000 + Math.random() * 10000;
+        }
+    }
+}
+function drawShootingStars() {
+    for (const s of shootingStars) {
+        const tailX = s.x - Math.cos(s.angle) * s.length;
+        const tailY = s.y - Math.sin(s.angle) * s.length;
+        const grad = ctx.createLinearGradient(tailX, tailY, s.x, s.y);
+        grad.addColorStop(0, 'rgba(255,255,255,0)');
+        grad.addColorStop(1, `rgba(255,255,255,${s.alpha})`);
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(tailX, tailY);
+        ctx.lineTo(s.x, s.y);
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        // Bright tip
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, 1.5, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${s.alpha})`;
+        ctx.fill();
+        ctx.restore();
+    }
+}
+function spawnUFO() {
+    const w = canvas.width, h = canvas.height;
+    // Appears on left or right edge, cruises across the upper sky
+    const fromLeft = Math.random() < 0.5;
+    ufoActive = {
+        x: fromLeft ? -30 : w + 30,
+        y: h * (0.08 + Math.random() * 0.20),
+        vx: fromLeft ? (0.4 + Math.random() * 0.5) : -(0.4 + Math.random() * 0.5),
+        vy: (Math.random() - 0.5) * 0.15,
+        alpha: 0,
+        phase: 0,
+        done: false,
+    };
+}
+function tickUFO() {
+    if (!isNightClear) {
+        ufoActive = null;
+        return;
+    }
+    const now = Date.now();
+    if (!ufoActive && now - lastUfoTime > nextUfoDelay) {
+        spawnUFO();
+        lastUfoTime = now;
+        nextUfoDelay = 45000 + Math.random() * 45000;
+    }
+    if (!ufoActive)
+        return;
+    const u = ufoActive;
+    u.x += u.vx;
+    u.y += u.vy;
+    u.phase += 0.04;
+    const w = canvas.width;
+    // Fade in over first ~40px of travel, fade out over last ~40px
+    const distFromEdge = u.vx > 0 ? u.x : w - u.x;
+    if (distFromEdge < 60) {
+        u.alpha = Math.min(u.alpha + 0.02, Math.min(1, distFromEdge / 60));
+    }
+    else {
+        u.alpha = Math.min(u.alpha + 0.02, 1);
+    }
+    const offscreen = u.vx > 0 ? u.x > w + 40 : u.x < -40;
+    if (offscreen) {
+        ufoActive = null;
+    }
+}
+function drawUFO() {
+    if (!ufoActive)
+        return;
+    const u = ufoActive;
+    const { x, y, alpha, phase } = u;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(x, y);
+    // Subtle vertical bob
+    const bob = Math.sin(phase) * 2;
+    // Beam glow below
+    const beamGrad = ctx.createRadialGradient(0, bob + 6, 0, 0, bob + 6, 18);
+    beamGrad.addColorStop(0, 'rgba(100,255,160,0.18)');
+    beamGrad.addColorStop(1, 'rgba(100,255,160,0)');
+    ctx.beginPath();
+    ctx.ellipse(0, bob + 6, 18, 12, 0, 0, Math.PI * 2);
+    ctx.fillStyle = beamGrad;
+    ctx.fill();
+    // Body — dark disc with green-tinted rim
+    ctx.beginPath();
+    ctx.ellipse(0, bob, 12, 5, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(30,36,40,0.92)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(100,255,160,0.7)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // Dome on top
+    ctx.beginPath();
+    ctx.ellipse(0, bob - 3, 6, 4, 0, Math.PI, 0);
+    ctx.fillStyle = 'rgba(80,200,140,0.4)';
+    ctx.fill();
+    // Blinking lights — alternate every ~40 frames using phase
+    const blink = Math.sin(phase * 2.5) > 0;
+    const lightColor = blink ? 'rgba(255,80,80,0.9)' : 'rgba(80,255,160,0.9)';
+    ctx.beginPath();
+    ctx.arc(-8, bob + 1, 1.2, 0, Math.PI * 2);
+    ctx.fillStyle = lightColor;
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(8, bob + 1, 1.2, 0, Math.PI * 2);
+    ctx.fillStyle = blink ? 'rgba(80,255,160,0.9)' : 'rgba(255,80,80,0.9)';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(0, bob + 2, 1.2, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,120,0.9)';
+    ctx.fill();
+    ctx.restore();
 }
 // ── Burst Particles ───────────────────────────────────────────────────────────
 function spawnBurst(noteCount, day, hue) {
@@ -487,6 +701,10 @@ function startRenderLoop(day, condition) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         tickAmbientParticles();
         drawAmbientParticles(condition);
+        tickShootingStars();
+        drawShootingStars();
+        tickUFO();
+        drawUFO();
         drawLightningFlash(condition);
         tickBurstParticles(day);
         drawBurstParticles();
@@ -499,7 +717,7 @@ function displayWeather(day, currentTemp, locationName, profile, isNight) {
     const get = (id) => document.getElementById(id);
     get('weather-emoji').textContent = nowEmoji(day.weatherCode, isNight);
     get('location-name').textContent = locationName;
-    get('current-temp').textContent = `${Math.round(currentTemp)}°`;
+    get('current-temp').innerHTML = `${Math.round(currentTemp)}<span class="deg">°</span>`;
     get('condition-label').textContent = wmoConditionLabel(day.weatherCode);
     const fl = feelsLike(currentTemp, day.windSpeedMax, day.humidityMax);
     get('weather-details').innerHTML = [
@@ -534,7 +752,7 @@ async function loadLocation(lat, lng, locationName) {
         playing = false;
     }
     displayWeather(day, currentTemp, locationName, profile, isNight);
-    initAmbientParticles(day, condition);
+    initAmbientParticles(day, condition, isNight && condition === 'clear');
     startRenderLoop(day, condition);
     const oldBtn = document.getElementById('play-btn');
     const btn = oldBtn.cloneNode(true);
