@@ -11,7 +11,9 @@
     /* Must come before display rules so hidden attribute always wins */
     [hidden] { display: none !important; }
 
-    body { min-height: 100dvh; overflow-x: hidden; }
+    body { height: 100dvh; overflow: hidden; transition: background 2s ease; }
+    #current-temp  { text-shadow: 0 2px 12px rgba(0,0,0,0.5); }
+    #weather-emoji { filter: drop-shadow(0 2px 8px rgba(0,0,0,0.4)); }
 
     #particle-canvas {
       position: fixed; inset: 0; z-index: 0; pointer-events: none;
@@ -52,10 +54,11 @@
 
     #weather-card {
       position: relative; z-index: 1;
-      min-height: 100dvh;
+      height: 100dvh;
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
       gap: 8px; padding: 32px 24px; text-align: center;
+      overflow: hidden;
     }
 
     #weather-emoji  { font-size: clamp(4rem, 15vw, 7rem); line-height: 1; }
@@ -71,6 +74,14 @@
     #audio-profile-label { font-size: 0.75rem; opacity: 0.35; margin-top: 12px; letter-spacing: 0.06em; }
 
     #play-btn { margin-top: 20px; padding: 14px 40px; font-size: 0.9rem; letter-spacing: 0.12em; text-transform: uppercase; }
+    #change-location-btn {
+      margin-top: 4px; padding: 8px 20px;
+      font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase;
+      background: transparent; color: inherit;
+      border: 1px solid rgba(255,255,255,0.18); border-radius: 6px;
+      opacity: 0.45; cursor: pointer;
+    }
+    #change-location-btn:hover { opacity: 0.75; }
   </style>
   <script type="importmap">{ "imports": { "tone": "https://esm.sh/tone@15" } }</script>
 </head>
@@ -95,6 +106,7 @@
     <div id="weather-details"></div>
     <div id="audio-profile-label"></div>
     <button id="play-btn">Play Chimes</button>
+    <button id="change-location-btn">Change Location</button>
   </div>
 
   <script type="module" src="dist/now.js"></script>
