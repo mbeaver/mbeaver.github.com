@@ -17,6 +17,20 @@ let lastLightningCheck = 0;
 let animFrameId = null;
 let engine = null;
 let playing = false;
+let currentLat = null;
+let currentLng = null;
+let currentLocationName = '';
+let refreshTimestamps = [];
+let lastAutoRefreshAttempt = 0;
+const LOADING_FRAMES = [
+    '|  |  |  |',
+    '/  |  |  \\',
+    '|  \\  /  |',
+    '\\  |  |  /',
+    '|  /  \\  |',
+];
+let loadingIntervalId = null;
+let loadingShownAt = 0;
 // ── Utilities ─────────────────────────────────────────────────────────────────
 function degreesToCompass(deg) {
     const dirs = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
@@ -95,6 +109,29 @@ function lerpColor(a, b, t) {
     const [br, bg, bb] = parseColor(b);
     return `rgb(${Math.round(ar + (br - ar) * t)},${Math.round(ag + (bg - ag) * t)},${Math.round(ab + (bb - ab) * t)})`;
 }
+function skyLuminance(top, bot) {
+    const [tr, tg, tb] = parseColor(top);
+    const [br, bg, bb] = parseColor(bot);
+    const r = (tr + br) / 2;
+    const g = (tg + bg) / 2;
+    const b = (tb + bb) / 2;
+    return 0.299 * r + 0.587 * g + 0.114 * b;
+}
+function applyTextScheme(luminance) {
+    const root = document.documentElement;
+    if (luminance > 130) {
+        root.style.setProperty('--now-text', '#1a2a3a');
+        root.style.setProperty('--now-shadow-sm', '0 1px 4px rgba(255,255,255,0.3)');
+        root.style.setProperty('--now-shadow-lg', '0 2px 6px rgba(255,255,255,0.2)');
+        root.style.setProperty('--now-btn-border', 'rgba(0,0,0,0.2)');
+    }
+    else {
+        root.style.setProperty('--now-text', '#ffffff');
+        root.style.setProperty('--now-shadow-sm', '0 1px 8px rgba(0,0,0,0.6)');
+        root.style.setProperty('--now-shadow-lg', '0 2px 12px rgba(0,0,0,0.5)');
+        root.style.setProperty('--now-btn-border', 'rgba(255,255,255,0.18)');
+    }
+}
 function parseLocalToUTC(dateStr, utcOffsetSeconds) {
     // Open-Meteo returns local times without timezone designator (e.g. "2026-05-15T05:55").
     // Appending Z treats the string as UTC; then subtracting the location offset converts
@@ -106,11 +143,51 @@ function windVector(day) {
     const strength = Math.min(day.windSpeedMax / 40, 1.0);
     return { vx: Math.sin(toRad) * strength, vy: -Math.cos(toRad) * strength, strength };
 }
+// ── Loading Animation ─────────────────────────────────────────────────────────
+function startLoadingAnimation(text) {
+    const el = document.getElementById('loading-state');
+    el.removeAttribute('hidden');
+    loadingShownAt = Date.now();
+    const animEl = el.querySelector('.loading-anim');
+    const textEl = el.querySelector('.loading-text');
+    textEl.textContent = text;
+    if (loadingIntervalId !== null)
+        clearInterval(loadingIntervalId);
+    let frame = 0;
+    animEl.textContent = LOADING_FRAMES[0];
+    loadingIntervalId = window.setInterval(() => {
+        frame = (frame + 1) % LOADING_FRAMES.length;
+        animEl.textContent = LOADING_FRAMES[frame];
+    }, 180);
+}
+async function waitMinLoadTime() {
+    const remaining = Math.max(0, 1000 - (Date.now() - loadingShownAt));
+    if (remaining > 0)
+        await new Promise(r => setTimeout(r, remaining));
+}
+function stopLoadingAnimation() {
+    if (loadingIntervalId !== null) {
+        clearInterval(loadingIntervalId);
+        loadingIntervalId = null;
+    }
+    document.getElementById('loading-state').setAttribute('hidden', '');
+}
 // ── API ───────────────────────────────────────────────────────────────────────
 async function tryGeolocation() {
     return new Promise((resolve, reject) => {
         navigator.geolocation.getCurrentPosition((pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }), reject, { timeout: 10000 });
     });
+}
+async function tryIPGeolocation() {
+    const res = await fetch('https://ipapi.co/json/');
+    const data = await res.json();
+    if (!data.latitude || !data.longitude)
+        throw new Error('IP geolocation unavailable');
+    return {
+        lat: data.latitude,
+        lng: data.longitude,
+        name: data.city || data.region || 'Your Location',
+    };
 }
 async function geocodeCity(name) {
     const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1&language=en&format=json`;
@@ -242,6 +319,7 @@ function updateSkyGradient(day, condition) {
         bot = lerpColor(bot, mod.color, mod.weight);
     }
     document.body.style.background = `linear-gradient(to bottom, ${top}, ${bot})`;
+    applyTextScheme(skyLuminance(top, bot));
 }
 // ── Ambient Particles ─────────────────────────────────────────────────────────
 function ambientTargetCount(day, condition) {
@@ -727,19 +805,21 @@ function displayWeather(day, currentTemp, locationName, profile, isNight) {
         `<span>Feels ${fl}°</span>`,
         `<span>H: ${Math.round(day.tempMax)}° / L: ${Math.round(day.tempMin)}°</span>`,
     ].join('');
-    get('audio-profile-label').textContent = `${profile.scaleLabel} · ${profile.material.charAt(0).toUpperCase() + profile.material.slice(1)}`;
-    get('loading-state').setAttribute('hidden', '');
+    get('play-btn-profile').textContent = `${profile.scaleLabel} · ${profile.material.charAt(0).toUpperCase() + profile.material.slice(1)}`;
     get('weather-card').removeAttribute('hidden');
 }
 function showError(message) {
-    document.getElementById('loading-state').setAttribute('hidden', '');
+    stopLoadingAnimation();
     const errorEl = document.getElementById('error-state');
     errorEl.innerHTML = `<p>${message}</p><button onclick="location.reload()">Retry</button>`;
     errorEl.removeAttribute('hidden');
 }
 // ── Location Loading ──────────────────────────────────────────────────────────
-async function loadLocation(lat, lng, locationName) {
-    document.getElementById('loading-state').removeAttribute('hidden');
+async function loadLocation(lat, lng, locationName, loadingText = 'Locating…') {
+    currentLat = lat;
+    currentLng = lng;
+    currentLocationName = locationName;
+    startLoadingAnimation(loadingText);
     document.getElementById('weather-card').setAttribute('hidden', '');
     document.getElementById('city-form').setAttribute('hidden', '');
     const { day, currentTemp } = await fetchForecast(lat, lng);
@@ -751,13 +831,16 @@ async function loadLocation(lat, lng, locationName) {
         engine.stop();
         playing = false;
     }
+    await waitMinLoadTime();
+    stopLoadingAnimation();
     displayWeather(day, currentTemp, locationName, profile, isNight);
     initAmbientParticles(day, condition, isNight && condition === 'clear');
     startRenderLoop(day, condition);
     const oldBtn = document.getElementById('play-btn');
     const btn = oldBtn.cloneNode(true);
     oldBtn.parentNode.replaceChild(btn, oldBtn);
-    btn.textContent = 'Play Chimes';
+    const btnLabel = btn.querySelector('#play-btn-label');
+    btnLabel.textContent = 'Play Chimes';
     btn.addEventListener('click', async () => {
         if (!playing) {
             if (!engine) {
@@ -766,15 +849,46 @@ async function loadLocation(lat, lng, locationName) {
             }
             engine.onStrike = (n) => spawnBurst(n, day, hue);
             await engine.start(profile);
-            btn.textContent = 'Stop Chimes';
+            btnLabel.textContent = 'Stop Chimes';
             playing = true;
         }
         else {
             engine.stop();
-            btn.textContent = 'Play Chimes';
+            btnLabel.textContent = 'Play Chimes';
             playing = false;
         }
     });
+}
+// ── Refresh ───────────────────────────────────────────────────────────────────
+async function doRefresh() {
+    if (currentLat === null)
+        return;
+    const wasPlaying = playing;
+    const refreshBtn = document.getElementById('refresh-btn');
+    if (refreshBtn)
+        refreshBtn.disabled = true;
+    try {
+        await loadLocation(currentLat, currentLng, currentLocationName, 'Refreshing…');
+        if (wasPlaying)
+            document.getElementById('play-btn')?.dispatchEvent(new MouseEvent('click'));
+    }
+    finally {
+        if (refreshBtn)
+            refreshBtn.disabled = false;
+    }
+}
+function tryAutoRefresh() {
+    const now = Date.now();
+    if (now - lastAutoRefreshAttempt < 5000)
+        return;
+    lastAutoRefreshAttempt = now;
+    if (currentLat === null)
+        return;
+    refreshTimestamps = refreshTimestamps.filter(t => now - t < 60000);
+    if (refreshTimestamps.length >= 3)
+        return;
+    refreshTimestamps.push(now);
+    doRefresh().catch(() => { });
 }
 // ── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
@@ -782,6 +896,7 @@ async function init() {
     ctx = canvas.getContext('2d');
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
+    startLoadingAnimation('Locating…');
     const form = document.getElementById('city-form');
     const input = document.getElementById('city-input');
     form.addEventListener('submit', async (e) => {
@@ -810,6 +925,28 @@ async function init() {
             showError('Could not load weather data. Check your connection and try again.');
         }
     });
+    function closeCityForm() {
+        form.setAttribute('hidden', '');
+        const existingError = form.querySelector('.city-error');
+        if (existingError)
+            existingError.remove();
+        if (currentLat !== null) {
+            document.getElementById('weather-card').removeAttribute('hidden');
+        }
+    }
+    document.getElementById('cancel-city-btn').addEventListener('click', closeCityForm);
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !form.hasAttribute('hidden'))
+            closeCityForm();
+    });
+    document.getElementById('refresh-btn').addEventListener('click', () => {
+        doRefresh().catch(() => { });
+    });
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible')
+            tryAutoRefresh();
+    });
+    window.addEventListener('focus', tryAutoRefresh);
     document.getElementById('change-location-btn').addEventListener('click', () => {
         if (playing && engine) {
             engine.stop();
@@ -834,8 +971,15 @@ async function init() {
         }
     }
     catch {
-        document.getElementById('loading-state').setAttribute('hidden', '');
-        form.removeAttribute('hidden');
+        try {
+            document.querySelector('#loading-state .loading-text').textContent = 'Detecting location…';
+            const ipLoc = await tryIPGeolocation();
+            await loadLocation(ipLoc.lat, ipLoc.lng, ipLoc.name);
+        }
+        catch {
+            stopLoadingAnimation();
+            form.removeAttribute('hidden');
+        }
     }
 }
 init();

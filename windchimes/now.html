@@ -6,14 +6,21 @@
   <title>Windchimes · Now</title>
   <link rel="stylesheet" href="style.css" />
   <style>
+    :root {
+      --now-text:       #ffffff;
+      --now-shadow-sm:  0 1px 8px  rgba(0,0,0,0.6);
+      --now-shadow-lg:  0 2px 12px rgba(0,0,0,0.5);
+      --now-btn-border: rgba(255,255,255,0.18);
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     /* Must come before display rules so hidden attribute always wins */
     [hidden] { display: none !important; }
 
     html { height: 100dvh; overflow: hidden; }
-    body { height: 100dvh; overflow: hidden; transition: background 2s ease; }
-    #current-temp  { text-shadow: 0 2px 12px rgba(0,0,0,0.5); }
+    body { height: 100dvh; overflow: hidden; color: var(--now-text); transition: background 2s ease, color 0.5s ease; }
+    #current-temp  { text-shadow: var(--now-shadow-lg); }
     #weather-emoji { filter: drop-shadow(0 2px 8px rgba(0,0,0,0.4)); }
 
     #particle-canvas {
@@ -25,6 +32,21 @@
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
       z-index: 2; gap: 12px;
+    }
+
+    .loading-anim {
+      font-family: var(--font-mono, monospace);
+      font-size: 2rem;
+      letter-spacing: 0.2em;
+      white-space: pre;
+      opacity: 0.8;
+      user-select: none;
+    }
+    .loading-text {
+      font-size: 0.8rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      opacity: 0.5;
     }
 
     /* City form: fixed strip at top of screen */
@@ -39,11 +61,17 @@
 
     #city-form input {
       padding: 10px 16px; font-size: 1rem; border-radius: 6px;
-      border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08);
-      color: inherit; outline: none; flex: 1; min-width: 0; max-width: 280px;
+      border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.92);
+      color: #1a1a2e; outline: none; flex: 1; min-width: 0; max-width: 280px;
     }
-    #city-form input::placeholder { opacity: 0.4; }
+    #city-form input::placeholder { color: #7a8090; opacity: 1; }
     #city-form button { padding: 10px 20px; font-size: 0.9rem; white-space: nowrap; flex-shrink: 0; }
+    #cancel-city-btn {
+      background: transparent !important; color: rgba(255,255,255,0.8) !important;
+      border: 1px solid rgba(255,255,255,0.35) !important; border-radius: 6px !important;
+      cursor: pointer;
+    }
+    #cancel-city-btn:hover { background: rgba(255,255,255,0.1) !important; color: #fff !important; }
     .city-error {
       position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
       font-size: 0.8rem; opacity: 0.9; color: #f87171;
@@ -63,27 +91,39 @@
     }
 
     #weather-emoji  { font-size: clamp(4rem, 15vw, 7rem); line-height: 1; margin-bottom: 6px; }
-    #location-name  { font-size: clamp(0.9rem, 3vw, 1.1rem); opacity: 0.5; text-transform: uppercase; letter-spacing: 0.1em; text-shadow: 0 1px 8px rgba(0,0,0,0.6); margin-bottom: 0; }
+    #location-name  { font-size: clamp(0.9rem, 3vw, 1.1rem); opacity: 0.5; text-transform: uppercase; letter-spacing: 0.1em; text-shadow: var(--now-shadow-sm); margin-bottom: 0; }
     #current-temp   { font-size: clamp(3rem, 12vw, 5rem); font-weight: 700; letter-spacing: -0.02em; margin-top: 2px; }
     .deg            { font-size: 0.45em; vertical-align: top; margin-top: 0.2em; display: inline-block; }
-    #condition-label { font-size: clamp(0.85rem, 2.5vw, 1rem); opacity: 0.6; text-transform: uppercase; letter-spacing: 0.08em; text-shadow: 0 1px 8px rgba(0,0,0,0.5); }
+    #condition-label { font-size: clamp(1rem, 3vw, 1.2rem); opacity: 0.85; text-transform: uppercase; letter-spacing: 0.08em; text-shadow: var(--now-shadow-sm); }
 
     #weather-details {
       display: flex; flex-wrap: wrap; gap: 12px 20px; justify-content: center;
-      margin-top: 8px; font-size: clamp(0.75rem, 2.5vw, 0.85rem); opacity: 0.55;
+      margin-top: 8px; font-size: clamp(0.9rem, 3vw, 1rem); opacity: 0.75;
     }
 
-    #audio-profile-label { font-size: 0.75rem; opacity: 0.35; margin-top: 12px; letter-spacing: 0.06em; }
-
-    #play-btn { margin-top: 20px; padding: 14px 40px; font-size: 0.9rem; letter-spacing: 0.12em; text-transform: uppercase; }
+    #action-group { display: flex; flex-direction: column; gap: 8px; margin-top: 20px; }
+    #play-btn {
+      padding: 12px 40px 14px; font-size: 0.9rem; letter-spacing: 0.12em; text-transform: uppercase;
+      width: 100%; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    #play-btn-profile { font-size: 0.72rem; letter-spacing: 0.08em; opacity: 0.65; text-transform: none; }
+    #location-actions { display: flex; gap: 8px; align-items: center; width: 100%; }
     #change-location-btn {
-      margin-top: 4px; padding: 8px 20px;
-      font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase;
+      flex: 1; padding: 8px 20px;
+      font-size: 0.85rem; letter-spacing: 0.1em; text-transform: uppercase;
       background: transparent; color: inherit;
-      border: 1px solid rgba(255,255,255,0.18); border-radius: 6px;
-      opacity: 0.45; cursor: pointer;
+      border: 1px solid var(--now-btn-border); border-radius: 6px;
+      opacity: 0.75; cursor: pointer;
     }
-    #change-location-btn:hover { opacity: 0.75; }
+    #change-location-btn:hover { opacity: 1; }
+    #refresh-btn {
+      padding: 8px 10px; font-size: 0.9rem; line-height: 1;
+      background: transparent; color: inherit;
+      border: 1px solid var(--now-btn-border); border-radius: 6px;
+      opacity: 0.75; cursor: pointer;
+    }
+    #refresh-btn:hover { opacity: 1; }
+    #refresh-btn:disabled { opacity: 0.2; cursor: default; }
   </style>
   <script type="importmap">{ "imports": { "tone": "https://esm.sh/tone@15" } }</script>
 </head>
@@ -94,9 +134,13 @@
   <form id="city-form" hidden>
     <input id="city-input" type="text" placeholder="Enter city name" autocomplete="off" />
     <button type="submit">Go</button>
+    <button type="button" id="cancel-city-btn">Cancel</button>
   </form>
 
-  <div id="loading-state">Locating…</div>
+  <div id="loading-state">
+    <div class="loading-anim"></div>
+    <div class="loading-text">Locating…</div>
+  </div>
 
   <div id="error-state" hidden></div>
 
@@ -106,9 +150,16 @@
     <div id="current-temp"></div>
     <div id="condition-label"></div>
     <div id="weather-details"></div>
-    <div id="audio-profile-label"></div>
-    <button id="play-btn">Play Chimes</button>
-    <button id="change-location-btn">Change Location</button>
+    <div id="action-group">
+      <button id="play-btn">
+        <span id="play-btn-label">Play Chimes</span>
+        <span id="play-btn-profile"></span>
+      </button>
+      <div id="location-actions">
+        <button id="change-location-btn">Change Location</button>
+        <button id="refresh-btn">↻</button>
+      </div>
+    </div>
   </div>
 
   <script type="module" src="dist/now.js"></script>
