@@ -1,0 +1,373 @@
+/* ── Animations ──────────────────────────────────────────────────── */
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes circuitFlash {
+  0%   { background: var(--color-tonic); border-color: var(--color-tonic); }
+  60%  { background: var(--color-tonic); border-color: var(--color-tonic); }
+  100% { background: var(--surface-2);  border-color: var(--chip-color, var(--border)); }
+}
+
+/* ── Tension / Resolution label bar ─────────────────────────────── */
+.tension-spectrum-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+}
+
+/* ── GPS suggestions row ─────────────────────────────────────────── */
+#gps-suggestions {
+  display: grid;
+  grid-template-columns: 1fr 260px 1fr;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+  align-items: start;
+}
+
+@media (min-width: 1440px) {
+  #gps-suggestions { grid-template-columns: 1fr 300px 1fr; gap: 16px; }
+}
+@media (min-width: 1920px) {
+  #gps-suggestions { grid-template-columns: 1fr 360px 1fr; gap: 20px; }
+}
+
+/* ── Suggestion panels (left/right) ──────────────────────────────── */
+#suggestions-left,
+#suggestions-right {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+#suggestions-left .suggestion-card:nth-child(2),
+#suggestions-right .suggestion-card:nth-child(2) {
+  animation-delay: 0.06s;
+}
+
+.suggestions-hint {
+  font-size: 12px;
+  color: var(--text-dim);
+  text-align: center;
+  padding: 20px 0;
+}
+
+.suggestion-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--card-color, var(--border));
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: transform 0.1s, border-color 0.15s;
+  animation: fadeSlideIn 0.2s ease-out both;
+}
+.suggestion-card:hover {
+  transform: translateY(-1px);
+  border-color: var(--card-color, var(--color-tonic));
+  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+}
+.sug-numeral {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+.sug-name {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.sug-mood {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+.sug-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-bottom: 4px;
+}
+
+.sug-diagram {
+  display: flex;
+  justify-content: center;
+  margin: 4px 0;
+}
+.sug-diagram .chord-diagram {
+  width: 62px;
+  height: 69px; /* 62/130 * 145 */
+}
+
+.sug-tension-bar {
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.sug-tension-fill {
+  height: 100%;
+  background: var(--card-color, var(--color-chromatic));
+  border-radius: 2px;
+  transition: width 0.3s;
+}
+
+/* ── Current chord (center) ──────────────────────────────────────── */
+#current-chord-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  min-height: 360px;
+}
+
+.current-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 4px;
+  color: var(--text-dim);
+  font-size: 14px;
+  text-align: center;
+}
+
+.chord-name-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.chord-name {
+  font-size: 36px;
+  font-weight: 800;
+  line-height: 1;
+}
+.chord-numeral {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.chord-mood {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+.tension-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.tension-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  width: 48px;
+  flex-shrink: 0;
+}
+.tension-bar {
+  flex: 1;
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.tension-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s, background 0.3s;
+}
+.tension-pct {
+  font-size: 11px;
+  color: var(--text-dim);
+  width: 32px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ── Chord diagram ────────────────────────────────────────────────── */
+.diagram-wrap {
+  display: flex;
+  justify-content: center;
+}
+.chord-diagram { display: block; }
+.no-diagram { font-size: 12px; color: var(--text-dim); }
+
+/* ── CAGED shape tabs ─────────────────────────────────────────────── */
+.shape-tabs {
+  display: flex;
+  gap: 6px;
+}
+.shape-tab {
+  width: 34px;
+  height: 30px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 600;
+}
+.shape-tab:hover:not(.disabled)  { border-color: var(--color-tonic); color: var(--text); }
+.shape-tab.active { background: var(--color-tonic); color: #0d0d1a; border-color: var(--color-tonic); }
+.shape-tab.disabled { opacity: 0.25; }
+
+/* ── History bar ─────────────────────────────────────────────────── */
+#history-bar {
+  display: flex;
+  gap: 6px;
+  margin-top: 14px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+  scroll-behavior: smooth;
+}
+.history-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--chip-color, var(--border));
+  border-radius: 6px;
+  flex-shrink: 0;
+  cursor: default;
+}
+.chip-numeral {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--chip-color, var(--text-dim));
+  line-height: 1;
+}
+.chip-name {
+  font-size: 10px;
+  color: var(--text-dim);
+}
+.history-chip.flash {
+  animation: circuitFlash 1.2s ease-out both;
+}
+
+/* ── Pending chord overlay ───────────────────────────────────────── */
+.pending-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(13, 13, 26, 0.82);
+  backdrop-filter: blur(2px);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  z-index: 10;
+}
+.pending-chord-name {
+  font-size: 40px;
+  font-weight: 800;
+  color: var(--text);
+}
+.pending-confidence {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.pending-label {
+  font-size: 14px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: 4px;
+}
+.pending-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+.pending-confirm {
+  background: var(--color-mediant);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pending-confirm:hover { filter: brightness(1.15); }
+.pending-dismiss {
+  background: var(--surface-2);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 20px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.pending-dismiss:hover { color: var(--text); border-color: var(--text-dim); }
+
+/* ── Listen button active state ──────────────────────────────────── */
+#listen-btn.active {
+  background: var(--color-dominant);
+  color: #fff;
+  border-color: var(--color-dominant);
+}
+
+/* ── Mic denied banner ───────────────────────────────────────────── */
+#mic-denied-banner {
+  display: none;
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface-2);
+  border: 1px solid #c44;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 13px;
+  color: var(--text);
+  z-index: 30;
+  max-width: 420px;
+  text-align: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+}
+#mic-denied-banner.visible { display: block; }
+#mic-denied-banner a {
+  color: var(--color-tonic);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ── Modes panel placeholder ─────────────────────────────────────── */
+.modes-placeholder {
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+/* ── Session log placeholder ─────────────────────────────────────── */
+.log-header {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.log-empty {
+  padding: 20px 16px;
+  font-size: 13px;
+  color: var(--text-dim);
+}

@@ -1,1 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chord-A-Long</title>
+  <link rel="stylesheet" href="/styles/reset.css" />
+  <link rel="stylesheet" href="/styles/layout.css" />
+  <link rel="stylesheet" href="/styles/gps.css" />
+  <link rel="stylesheet" href="/styles/log.css" />
+</head>
+<body>
+<div id="app">
 
+  <!-- Top bar -->
+  <header id="key-bar">
+    <button id="key-btn">Key: ? (detecting…)</button>
+    <select id="audio-device-select" title="Audio input device">
+      <option value="">Default mic</option>
+    </select>
+    <button id="listen-btn">● Mic Off</button>
+    <button id="confirm-toggle" class="on">Confirm: On</button>
+    <button id="manual-btn">+ Manual</button>
+    <button id="clear-btn">✕ Clear</button>
+    <span class="app-title">chord-a-long</span>
+  </header>
+
+  <!-- GPS panel -->
+  <section id="gps-panel">
+    <div class="tension-spectrum-label">
+      <span>TENSION ◄</span>
+      <span>► RESOLUTION</span>
+    </div>
+    <div id="gps-suggestions">
+      <div id="suggestions-left"></div>
+      <div id="current-chord-panel"></div>
+      <div id="suggestions-right"></div>
+    </div>
+    <div id="history-bar"></div>
+  </section>
+
+  <!-- Modes panel (Phase 7) -->
+  <section id="modes-panel">
+    <p class="modes-placeholder">Mode tablature — Phase 7</p>
+  </section>
+
+  <!-- Audio visualizer -->
+  <section id="audio-viz">
+    <canvas id="viz-canvas"></canvas>
+  </section>
+
+  <!-- Session log (Phase 7) -->
+  <aside id="session-log">
+    <div class="log-header">Session Log</div>
+    <div class="log-empty">No circuits yet.<br>Play a resolving progression to capture one.</div>
+  </aside>
+
+</div>
+
+<!-- Key inference toast -->
+<div id="key-toast" class="hidden"></div>
+
+<!-- Key picker overlay -->
+<div id="key-picker-overlay" class="overlay hidden"></div>
+
+<!-- Chord picker overlay -->
+<div id="chord-picker-overlay" class="overlay hidden"></div>
+
+<!-- Mic denied banner -->
+<div id="mic-denied-banner">
+  ⚠ Microphone access denied.<br>
+  Check your browser's site permissions and reload the page.
+</div>
+
+<script src="/dist/bundle.js" type="module"></script>
+</body>
+</html>
