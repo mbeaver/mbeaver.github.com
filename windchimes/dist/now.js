@@ -318,6 +318,11 @@ function updateSkyGradient(day, condition) {
         top = lerpColor(top, mod.color, mod.weight);
         bot = lerpColor(bot, mod.color, mod.weight);
     }
+    const cloudWeight = (day.cloudCover / 100) * 0.35;
+    if (cloudWeight > 0) {
+        top = lerpColor(top, '#7a8a9a', cloudWeight);
+        bot = lerpColor(bot, '#7a8a9a', cloudWeight);
+    }
     document.body.style.background = `linear-gradient(to bottom, ${top}, ${bot})`;
     applyTextScheme(skyLuminance(top, bot));
 }
