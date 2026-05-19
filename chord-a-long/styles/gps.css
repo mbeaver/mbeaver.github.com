@@ -103,8 +103,8 @@
   margin: 4px 0;
 }
 .sug-diagram .chord-diagram {
-  width: 62px;
-  height: 69px; /* 62/130 * 145 */
+  width: 143px;
+  height: 138px; /* 143/150 * 145 */
 }
 
 .sug-tension-bar {

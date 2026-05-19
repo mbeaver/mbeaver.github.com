@@ -612,7 +612,7 @@ function buildPickerContent() {
 }
 
 // src/ui/chord-diagram.ts
-var W = 130;
+var W = 150;
 var H = 145;
 var SX = [12, 28, 44, 60, 76, 92];
 var MARKER_Y = 12;
@@ -630,7 +630,7 @@ function buildDiagramSVG(voicing) {
   if (!isOpen) {
     const labelX = (SX[5] ?? 92) + 6;
     parts.push(
-      `<text x="${labelX}" y="${NUT_Y + FRET_H * 0.5 + 4}" font-size="10" fill="var(--text-dim)" text-anchor="start" font-family="monospace">${voicing.baseFret}fr</text>`
+      `<text x="${labelX}" y="${NUT_Y + FRET_H * 0.5 + 5}" font-size="15" fill="var(--text)" text-anchor="start" font-family="monospace" font-weight="600">${voicing.baseFret}fr</text>`
     );
   }
   for (const x of SX) {
@@ -669,7 +669,7 @@ function buildDiagramSVG(voicing) {
         `<circle cx="${x}" cy="${MARKER_Y}" r="5" fill="none" stroke="var(--text)" stroke-width="1.5"/>`
       );
     } else {
-      const row = pos.fret - voicing.baseFret;
+      const row = isOpen ? pos.fret - 1 : pos.fret - voicing.baseFret;
       if (row >= 0 && row < NUM_FRETS) {
         const onBarre = voicing.barre !== void 0 && pos.fret === voicing.barre.fret;
         if (!onBarre) {
@@ -1206,6 +1206,14 @@ function initModesPanel() {
   panel.append(tabBar, tabDisplay);
   on("key:changed", (event) => {
     currentKey3 = event.key;
+    const defaultMode = event.key.mode === "minor" ? "Aeolian" : "Ionian";
+    if (activeMode !== defaultMode) {
+      const prev = modeTabBtns.get(activeMode);
+      if (prev) prev.classList.remove("active");
+      activeMode = defaultMode;
+      const next = modeTabBtns.get(activeMode);
+      if (next) next.classList.add("active");
+    }
     renderTab();
   });
   on("mode:changed", (event) => {
