@@ -1566,6 +1566,283 @@ function drawFrame() {
   }
 }
 
+// src/ui/visualizer.ts
+var MAX_RINGS = 20;
+var RING_POINTS = 80;
+var RINGS_PER_CHORD = 2;
+var COLOR_HEX = {
+  "warm-gold": "#c49a14",
+  "orange": "#d4621a",
+  "cool-blue": "#3a72b8",
+  "green": "#2d8a40",
+  "purple": "#7b3aab",
+  "neutral": "#666680"
+};
+var COLOR_RGB = {
+  "warm-gold": [196, 154, 20],
+  "orange": [212, 98, 26],
+  "cool-blue": [58, 114, 184],
+  "green": [45, 138, 64],
+  "purple": [123, 58, 171],
+  "neutral": [102, 102, 128]
+};
+var COLOR_TENSION = {
+  "warm-gold": 0.05,
+  "cool-blue": 0.4,
+  "green": 0.3,
+  "orange": 0.85,
+  "purple": 0.95,
+  "neutral": 0.5
+};
+var screen;
+var canvas2;
+var ctx2;
+var vizBtn;
+var active = false;
+var rafId3 = null;
+var theoryDepth = 1;
+var shimmerAmount = 0;
+var startTime = 0;
+var rings = [];
+var currentChord2 = null;
+var currentKey4 = null;
+var bgTarget = [0, 0, 0];
+var bgCurrent = [0, 0, 0];
+function initVisualizer() {
+  screen = qs("#viz-screen");
+  canvas2 = qs("#aurora-canvas");
+  vizBtn = qs("#viz-toggle-btn");
+  const maybeCtx = canvas2.getContext("2d");
+  if (!maybeCtx) return;
+  ctx2 = maybeCtx;
+  const style = getComputedStyle(document.documentElement);
+  const CSS_VAR_MAP = [
+    ["warm-gold", "--color-tonic"],
+    ["orange", "--color-dominant"],
+    ["cool-blue", "--color-subdominant"],
+    ["green", "--color-mediant"],
+    ["purple", "--color-leading"],
+    ["neutral", "--color-chromatic"]
+  ];
+  for (const [key, varName] of CSS_VAR_MAP) {
+    const val = style.getPropertyValue(varName).trim();
+    if (val) COLOR_HEX[key] = val;
+  }
+  screen.querySelectorAll(".viz-depth-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const d = parseInt(btn.dataset["depth"] ?? "1", 10);
+      if (d === 1 || d === 2 || d === 3) {
+        theoryDepth = d;
+        screen.querySelectorAll(".viz-depth-btn").forEach((b) => b.classList.toggle("active", b === btn));
+      }
+    });
+  });
+  vizBtn.addEventListener("click", enter);
+  qs("#viz-back-btn").addEventListener("click", exit);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && active) exit();
+  });
+  const ro = new ResizeObserver(() => {
+    if (active) resizeCanvas();
+  });
+  ro.observe(screen);
+  on("chord:confirmed", (e) => {
+    currentChord2 = e.chord;
+    spawnRing(e.chord);
+    bgTarget = [...COLOR_RGB[e.chord.color] ?? [0, 0, 0]];
+  });
+  on("pitch:detected", (e) => {
+    shimmerAmount = e.confidence;
+  });
+  on("circuit:completed", () => {
+    bloomAllRings();
+  });
+  on("key:changed", (e) => {
+    currentKey4 = e.key;
+  });
+  on("session:reset", () => {
+    rings = [];
+    currentChord2 = null;
+    currentKey4 = null;
+    shimmerAmount = 0;
+    bgTarget = [0, 0, 0];
+    bgCurrent = [0, 0, 0];
+  });
+}
+function enter() {
+  active = true;
+  screen.classList.add("active");
+  vizBtn.classList.add("active");
+  startTime = performance.now();
+  requestAnimationFrame(() => {
+    resizeCanvas();
+    if (rafId3 === null) rafId3 = requestAnimationFrame(rafLoop2);
+  });
+}
+function exit() {
+  active = false;
+  screen.classList.remove("active");
+  vizBtn.classList.remove("active");
+  if (rafId3 !== null) {
+    cancelAnimationFrame(rafId3);
+    rafId3 = null;
+  }
+}
+function resizeCanvas() {
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas2.clientWidth;
+  const h = canvas2.clientHeight;
+  if (w === 0 || h === 0) return;
+  canvas2.width = Math.round(w * dpr);
+  canvas2.height = Math.round(h * dpr);
+}
+function spawnRing(chord) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas2.width / dpr;
+  const h = canvas2.height / dpr;
+  const corner = Math.sqrt((w / 2) ** 2 + (h / 2) ** 2);
+  const tension = COLOR_TENSION[chord.color] ?? 0.5;
+  const color = COLOR_HEX[chord.color] ?? "#666680";
+  for (let i = 0; i < RINGS_PER_CHORD; i++) {
+    if (rings.length >= MAX_RINGS) rings.shift();
+    const startProgress = i * 0.07;
+    rings.push({
+      color,
+      radius: corner * startProgress,
+      maxRadius: corner,
+      initialOpacity: 0.88 - i * 0.1,
+      strokeWidth: 2.8 + tension * 3.2 - i * 0.45,
+      expandRate: 7e-3 + tension * 25e-4
+    });
+  }
+}
+function bloomAllRings() {
+  for (const ring of rings) {
+    ring.initialOpacity = Math.min(1, ring.initialOpacity * 1.4);
+    ring.expandRate = 0.016;
+  }
+}
+function shimmerOffset(angle, t, amp) {
+  return amp * (Math.sin(angle * 3 + t * 2.1) * 0.5 + Math.sin(angle * 7 + t * 1.3) * 0.3 + Math.sin(angle * 13 + t * 0.7) * 0.2);
+}
+function rafLoop2() {
+  if (!active) {
+    rafId3 = null;
+    return;
+  }
+  renderFrame();
+  rafId3 = requestAnimationFrame(rafLoop2);
+}
+function renderFrame() {
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas2.width / dpr;
+  const h = canvas2.height / dpr;
+  if (w === 0 || h === 0) return;
+  const cx = w / 2;
+  const cy = h / 2;
+  const t = (performance.now() - startTime) / 1e3;
+  const [r0, g0, b0] = bgCurrent;
+  const [rt, gt, bt] = bgTarget;
+  bgCurrent = [
+    r0 + (rt - r0) * 0.015,
+    g0 + (gt - g0) * 0.015,
+    b0 + (bt - b0) * 0.015
+  ];
+  ctx2.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const [rc, gc, bc] = bgCurrent;
+  ctx2.fillStyle = `rgb(${Math.round(13 + rc * 0.1)},${Math.round(13 + gc * 0.07)},${Math.round(18 + bc * 0.1)})`;
+  ctx2.fillRect(0, 0, w, h);
+  for (let ri = rings.length - 1; ri >= 0; ri--) {
+    const ring = rings[ri];
+    if (!ring) continue;
+    ring.radius = Math.min(ring.maxRadius, ring.radius + ring.maxRadius * ring.expandRate);
+    const progress = ring.radius / ring.maxRadius;
+    const opacity = ring.initialOpacity * Math.pow(1 - progress, 1.4);
+    if (opacity <= 8e-3) {
+      rings.splice(ri, 1);
+      continue;
+    }
+    ctx2.save();
+    ctx2.globalAlpha = opacity;
+    ctx2.strokeStyle = ring.color;
+    ctx2.lineWidth = ring.strokeWidth;
+    ctx2.shadowBlur = 22;
+    ctx2.shadowColor = ring.color;
+    const shimAmp = shimmerAmount * ring.radius * 0.025;
+    ctx2.beginPath();
+    for (let pi = 0; pi <= RING_POINTS; pi++) {
+      const angle = pi / RING_POINTS * Math.PI * 2;
+      const r2 = ring.radius + shimmerOffset(angle, t, shimAmp);
+      const x = cx + Math.cos(angle) * r2;
+      const y = cy + Math.sin(angle) * r2;
+      if (pi === 0) ctx2.moveTo(x, y);
+      else ctx2.lineTo(x, y);
+    }
+    ctx2.closePath();
+    ctx2.stroke();
+    ctx2.restore();
+  }
+  if (theoryDepth >= 2 && currentChord2) {
+    const cc = COLOR_HEX[currentChord2.color] ?? "#ffffff";
+    ctx2.save();
+    ctx2.textAlign = "center";
+    ctx2.textBaseline = "middle";
+    ctx2.fillStyle = cc;
+    ctx2.globalAlpha = 0.2;
+    ctx2.font = `bold ${Math.round(w * 0.11)}px system-ui, sans-serif`;
+    ctx2.fillText(currentChord2.name, cx, cy - h * 0.03);
+    if (currentChord2.nashvilleNumeral) {
+      ctx2.globalAlpha = 0.12;
+      ctx2.font = `${Math.round(w * 0.055)}px system-ui, sans-serif`;
+      ctx2.fillText(currentChord2.nashvilleNumeral, cx, cy + h * 0.095);
+    }
+    ctx2.restore();
+  }
+  if (theoryDepth >= 3) {
+    drawChromaticWheel(cx, cy, Math.min(w, h));
+  }
+}
+function drawChromaticWheel(cx, cy, minDim) {
+  const arcR = minDim * 0.435;
+  const thick = minDim * 0.055;
+  const labelR = minDim * 0.475;
+  const TAU = Math.PI * 2;
+  const gapRad = 0.03;
+  const chordPCs = new Set(currentChord2?.pitchClasses ?? []);
+  const scalePCs = new Set(currentKey4?.scaleNotes ?? []);
+  const chordColor = currentChord2 ? COLOR_HEX[currentChord2.color] ?? "#ffffff" : "#ffffff";
+  for (let pc = 0; pc < 12; pc++) {
+    const startAngle = pc / 12 * TAU - Math.PI / 2 + gapRad / 2;
+    const endAngle = (pc + 1) / 12 * TAU - Math.PI / 2 - gapRad / 2;
+    const inChord = chordPCs.has(pc);
+    const inScale = scalePCs.has(pc);
+    const segColor = inChord ? chordColor : "#ffffff";
+    const alpha = inChord ? 0.9 : inScale ? 0.28 : 0.07;
+    ctx2.save();
+    ctx2.globalAlpha = alpha;
+    ctx2.strokeStyle = segColor;
+    ctx2.lineWidth = thick;
+    ctx2.shadowBlur = inChord ? 12 : 0;
+    ctx2.shadowColor = segColor;
+    ctx2.lineCap = "butt";
+    ctx2.beginPath();
+    ctx2.arc(cx, cy, arcR, startAngle, endAngle);
+    ctx2.stroke();
+    ctx2.restore();
+    const mid = (startAngle + endAngle) / 2;
+    const lx = cx + Math.cos(mid) * labelR;
+    const ly = cy + Math.sin(mid) * labelR;
+    ctx2.save();
+    ctx2.globalAlpha = inChord ? 0.9 : inScale ? 0.35 : 0.1;
+    ctx2.fillStyle = "#ffffff";
+    ctx2.font = `${Math.round(minDim * 0.026)}px system-ui, sans-serif`;
+    ctx2.textAlign = "center";
+    ctx2.textBaseline = "middle";
+    ctx2.fillText(NOTE_NAMES_SHARP[pc] ?? "", lx, ly);
+    ctx2.restore();
+  }
+}
+
 // src/audio/pitch-detector.ts
 var MIN_FREQ2 = 80;
 var MAX_FREQ2 = 1318;
@@ -1861,6 +2138,7 @@ function init() {
   initConfirmToggle();
   initClearButton();
   initAudioViz();
+  initVisualizer();
   console.log("Chord-A-Long loaded");
 }
 async function populateDevicePicker(sel) {

@@ -4,10 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chord-A-Long</title>
-  <link rel="stylesheet" href="/chord-a-long/styles/reset.css" />
-  <link rel="stylesheet" href="/chord-a-long/styles/layout.css" />
-  <link rel="stylesheet" href="/chord-a-long/styles/gps.css" />
-  <link rel="stylesheet" href="/chord-a-long/styles/log.css" />
+  <link rel="stylesheet" href="/styles/reset.css" />
+  <link rel="stylesheet" href="/styles/layout.css" />
+  <link rel="stylesheet" href="/styles/gps.css" />
+  <link rel="stylesheet" href="/styles/log.css" />
+  <link rel="stylesheet" href="/styles/visualizer.css" />
 </head>
 <body>
 <div id="app">
@@ -22,6 +23,7 @@
     <button id="confirm-toggle" class="on">Confirm: On</button>
     <button id="manual-btn">+ Manual</button>
     <button id="clear-btn">✕ Clear</button>
+    <button id="viz-toggle-btn">◈ Viz</button>
     <span class="app-title">chord-a-long</span>
   </header>
 
@@ -72,6 +74,20 @@
   Check your browser's site permissions and reload the page.
 </div>
 
-<script src="/chord-a-long/dist/bundle.js" type="module"></script>
+<!-- Harmonic aurora visualizer (full-screen overlay) -->
+<div id="viz-screen">
+  <canvas id="aurora-canvas"></canvas>
+  <div id="viz-controls">
+    <button id="viz-back-btn">← GPS</button>
+    <div class="viz-depth-dial">
+      <span class="viz-depth-dial-label">Depth</span>
+      <button class="viz-depth-btn active" data-depth="1">1</button>
+      <button class="viz-depth-btn" data-depth="2">2</button>
+      <button class="viz-depth-btn" data-depth="3">3</button>
+    </div>
+  </div>
+</div>
+
+<script src="/dist/bundle.js" type="module"></script>
 </body>
 </html>

@@ -111,6 +111,19 @@ html, body {
 }
 #clear-btn:hover { border-color: #e04040; color: #e04040; }
 
+#viz-toggle-btn {
+  padding: 5px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--color-leading);
+  border-radius: 6px;
+  color: var(--color-leading);
+  font-size: 13px;
+  opacity: 0.7;
+  transition: opacity 0.15s, filter 0.15s;
+}
+#viz-toggle-btn:hover { opacity: 1; filter: brightness(1.2); }
+#viz-toggle-btn.active { opacity: 1; }
+
 .app-title {
   margin-left: auto;
   font-size: 18px;
