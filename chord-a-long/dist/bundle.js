@@ -13,6 +13,8 @@ function createSession() {
   };
 }
 function appendChord(session, chord, source, confidence) {
+  const lastEvent = session.events[session.events.length - 1];
+  if (lastEvent?.chord.name === chord.name) return session;
   const event = {
     id: randomId(),
     timestamp: Date.now(),
@@ -84,6 +86,7 @@ function buildNashvilleNotation(chords, key) {
 var CircuitTracker = class {
   history = [];
   processNewChord(chord, key) {
+    if (this.history[this.history.length - 1]?.name === chord.name) return null;
     this.history = [...this.history, chord];
     const matches = scanCadences(this.history, key);
     const lastIdx = this.history.length - 1;
@@ -628,9 +631,9 @@ function buildDiagramSVG(voicing) {
   const parts = [];
   parts.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" class="chord-diagram">`);
   if (!isOpen) {
-    const labelX = (SX[5] ?? 92) + 6;
+    const labelX = (SX[5] ?? 92) + 12;
     parts.push(
-      `<text x="${labelX}" y="${NUT_Y + FRET_H * 0.5 + 5}" font-size="15" fill="var(--text)" text-anchor="start" font-family="monospace" font-weight="600">${voicing.baseFret}fr</text>`
+      `<text x="${labelX}" y="${NUT_Y - 6}" font-size="15" fill="var(--text)" text-anchor="start" font-family="monospace" font-weight="600">${voicing.baseFret}fr</text>`
     );
   }
   for (const x of SX) {
@@ -719,7 +722,9 @@ function initGpsPanel() {
   on("chord:confirmed", (event) => {
     hidePendingOverlay();
     currentChord = event.chord;
-    history = [...history, event.chord];
+    if (history[history.length - 1]?.name !== event.chord.name) {
+      history = [...history, event.chord];
+    }
     currentVoicings = resolveVoicings(event.chord);
     activeShapeIdx = 0;
     renderCurrentChord();
@@ -1184,10 +1189,114 @@ function generateTab(key, mode) {
 
 // src/ui/modes-panel.ts
 var MODE_NAMES = ["Ionian", "Dorian", "Phrygian", "Lydian", "Mixolydian", "Aeolian", "Locrian"];
+var STRINGS = [
+  { label: "E\u2082", pitchClass: 4, octave: 2 },
+  { label: "A\u2082", pitchClass: 9, octave: 2 },
+  { label: "D\u2083", pitchClass: 2, octave: 3 },
+  { label: "G\u2083", pitchClass: 7, octave: 3 },
+  { label: "B\u2083", pitchClass: 11, octave: 3 },
+  { label: "E\u2084", pitchClass: 4, octave: 4 }
+];
 var tabDisplay;
 var activeMode = "Ionian";
 var currentKey3 = null;
 var modeTabBtns = /* @__PURE__ */ new Map();
+var tunerActive = false;
+var audioActive = false;
+var tunerBtn = null;
+var tunerWrap = null;
+var tunerNoteEl = null;
+var tunerCentsEl = null;
+var tunerNeedle = null;
+var tunerStringChips = [];
+function midiNote(pitchClass, octave) {
+  return (octave + 1) * 12 + pitchClass;
+}
+function nearestStringIdx(pitchClass, octave) {
+  const detectedMidi = midiNote(pitchClass, octave);
+  let bestIdx = 0;
+  let bestDist = Infinity;
+  for (let i = 0; i < STRINGS.length; i++) {
+    const s = STRINGS[i];
+    if (!s) continue;
+    const dist = Math.abs(detectedMidi - midiNote(s.pitchClass, s.octave));
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestIdx = i;
+    }
+  }
+  return bestIdx;
+}
+function renderTuner(panel) {
+  tunerWrap = el("div", { class: "tuner-wrap" });
+  const topRow = el("div", { class: "tuner-top-row" });
+  tunerNoteEl = el("div", { class: "tuner-note" }, audioActive ? "\u2013" : "\u2013");
+  tunerCentsEl = el("div", { class: "tuner-cents" }, "");
+  topRow.append(tunerNoteEl, tunerCentsEl);
+  const trackWrap = el("div", { class: "tuner-track-wrap" });
+  const trackLabels = el("div", { class: "tuner-track-labels" });
+  trackLabels.append(
+    el("span", {}, "\u221250\xA2"),
+    el("span", {}, "0"),
+    el("span", {}, "+50\xA2")
+  );
+  const track = el("div", { class: "tuner-track" });
+  tunerNeedle = el("div", { class: "tuner-needle" });
+  track.append(tunerNeedle);
+  trackWrap.append(track, trackLabels);
+  const stringsRow = el("div", { class: "tuner-strings" });
+  tunerStringChips = [];
+  for (const s of STRINGS) {
+    const chip = el("div", { class: "tuner-string-chip" }, s.label);
+    tunerStringChips.push(chip);
+    stringsRow.append(chip);
+  }
+  tunerWrap.append(topRow, trackWrap, stringsRow);
+  panel.append(tunerWrap);
+  setTunerIdle();
+}
+function setTunerIdle() {
+  if (!tunerNoteEl || !tunerCentsEl || !tunerNeedle) return;
+  tunerNoteEl.textContent = "\u2013";
+  tunerNoteEl.className = "tuner-note";
+  tunerCentsEl.textContent = "";
+  tunerNeedle.style.left = "50%";
+  tunerNeedle.className = "tuner-needle";
+  for (const chip of tunerStringChips) chip.classList.remove("active");
+}
+function updateTuner(pitchClass, octave, cents) {
+  if (!tunerNoteEl || !tunerCentsEl || !tunerNeedle) return;
+  const noteName2 = NOTE_NAMES_SHARP[pitchClass] ?? "?";
+  tunerNoteEl.textContent = `${noteName2}${octave}`;
+  const sign = cents >= 0 ? "+" : "";
+  tunerCentsEl.textContent = `${sign}${cents}\xA2`;
+  const absCents = Math.abs(cents);
+  const tuneClass = absCents <= 5 ? "in-tune" : absCents <= 20 ? "close" : "off";
+  tunerNoteEl.className = `tuner-note ${tuneClass}`;
+  tunerCentsEl.className = `tuner-cents ${tuneClass}`;
+  tunerNeedle.className = `tuner-needle ${tuneClass}`;
+  const pct = 50 + Math.max(-50, Math.min(50, cents));
+  tunerNeedle.style.left = `${pct}%`;
+  const nearIdx = nearestStringIdx(pitchClass, octave);
+  for (let i = 0; i < tunerStringChips.length; i++) {
+    tunerStringChips[i]?.classList.toggle("active", i === nearIdx);
+  }
+}
+function renderPanelContent(panel) {
+  while (panel.children.length > 1) panel.removeChild(panel.lastChild);
+  tunerWrap = null;
+  tunerNoteEl = null;
+  tunerCentsEl = null;
+  tunerNeedle = null;
+  tunerStringChips = [];
+  if (tunerActive) {
+    renderTuner(panel);
+  } else {
+    tabDisplay = el("pre", { class: "tab-display" });
+    panel.append(tabDisplay);
+    renderTab();
+  }
+}
 function initModesPanel() {
   const panel = qs("#modes-panel");
   panel.innerHTML = "";
@@ -1197,13 +1306,31 @@ function initModesPanel() {
       class: `mode-tab-btn${mode === activeMode ? " active" : ""}`
     }, mode);
     btn.addEventListener("click", () => {
+      if (tunerActive) {
+        tunerActive = false;
+        if (tunerBtn) tunerBtn.classList.remove("active");
+        renderPanelContent(panel);
+      }
       emit({ type: "mode:changed", mode });
     });
     modeTabBtns.set(mode, btn);
     tabBar.append(btn);
   }
+  tunerBtn = el("button", { class: "mode-tab-btn tuner-tab-btn" }, "\u2669 Tuner");
+  tunerBtn.addEventListener("click", () => {
+    tunerActive = !tunerActive;
+    tunerBtn.classList.toggle("active", tunerActive);
+    if (tunerActive) {
+      for (const btn of modeTabBtns.values()) btn.classList.remove("active");
+    } else {
+      modeTabBtns.get(activeMode)?.classList.add("active");
+    }
+    renderPanelContent(panel);
+  });
+  tabBar.append(tunerBtn);
+  panel.append(tabBar);
   tabDisplay = el("pre", { class: "tab-display" }, "Select a key to see mode tablature");
-  panel.append(tabBar, tabDisplay);
+  panel.append(tabDisplay);
   on("key:changed", (event) => {
     currentKey3 = event.key;
     const defaultMode = event.key.mode === "minor" ? "Aeolian" : "Ionian";
@@ -1212,9 +1339,9 @@ function initModesPanel() {
       if (prev) prev.classList.remove("active");
       activeMode = defaultMode;
       const next = modeTabBtns.get(activeMode);
-      if (next) next.classList.add("active");
+      if (next && !tunerActive) next.classList.add("active");
     }
-    renderTab();
+    if (!tunerActive) renderTab();
   });
   on("mode:changed", (event) => {
     const prev = modeTabBtns.get(activeMode);
@@ -1222,10 +1349,25 @@ function initModesPanel() {
     activeMode = event.mode;
     const next = modeTabBtns.get(activeMode);
     if (next) next.classList.add("active");
-    renderTab();
+    if (!tunerActive) renderTab();
+  });
+  on("audio:started", () => {
+    audioActive = true;
+  });
+  on("audio:stopped", () => {
+    audioActive = false;
+    if (tunerActive) setTunerIdle();
+  });
+  on("pitch:detected", (event) => {
+    if (!tunerActive) return;
+    updateTuner(event.pitchClass, event.octave, event.cents);
+  });
+  on("session:reset", () => {
+    if (tunerActive) setTunerIdle();
   });
 }
 function renderTab() {
+  if (!tabDisplay) return;
   if (!currentKey3) {
     patchText(tabDisplay, "Select a key to see mode tablature");
     return;
@@ -1636,6 +1778,14 @@ function onAudioFrame() {
   const analyser2 = getAnalyser();
   if (!analyser2) return;
   const pitches = detectPitches(analyser2, getSampleRate());
+  const best = pitches[0];
+  if (best && best.confidence > 0.6) {
+    const midi = 12 * Math.log2(best.frequency / 440) + 69;
+    const roundedMidi = Math.round(midi);
+    const targetHz = 440 * Math.pow(2, (roundedMidi - 69) / 12);
+    const cents = Math.round(1200 * Math.log2(best.frequency / targetHz));
+    emit({ type: "pitch:detected", frequency: best.frequency, pitchClass: best.pitchClass, octave: best.octave, cents, confidence: best.confidence });
+  }
   const guess = recognizeChord(pitches, confirmedKey());
   if (!guess || guess.confidence < 0.6) {
     if (lastPendingName !== null) {
