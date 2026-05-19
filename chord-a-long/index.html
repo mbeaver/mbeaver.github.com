@@ -4,11 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chord-A-Long</title>
-  <link rel="stylesheet" href="styles/reset.css" />
-  <link rel="stylesheet" href="styles/layout.css" />
-  <link rel="stylesheet" href="styles/gps.css" />
-  <link rel="stylesheet" href="styles/log.css" />
-  <link rel="stylesheet" href="styles/visualizer.css" />
+  <link rel="stylesheet" href="/styles/reset.css" />
+  <link rel="stylesheet" href="/styles/layout.css" />
+  <link rel="stylesheet" href="/styles/gps.css" />
+  <link rel="stylesheet" href="/styles/log.css" />
+  <link rel="stylesheet" href="/styles/visualizer.css" />
+  <link rel="stylesheet" href="/styles/game.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
 </head>
 <body>
 <div id="app">
@@ -24,6 +28,7 @@
     <button id="manual-btn">+ Manual</button>
     <button id="clear-btn">✕ Clear</button>
     <button id="viz-toggle-btn">◈ Viz</button>
+    <button id="game-toggle-btn">🎮 Chord Caster</button>
     <span class="app-title">chord-a-long</span>
   </header>
 
@@ -74,6 +79,27 @@
   Check your browser's site permissions and reload the page.
 </div>
 
+<!-- Game panel (Chord Caster — full-screen overlay) -->
+<div id="game-panel" class="hidden">
+  <button id="game-quit-btn">✕ Quit</button>
+  <button id="game-tutorial-skip-btn" class="hidden">SKIP TUTORIAL</button>
+  <div id="game-key-select">
+    <p>Choose your key</p>
+    <div class="key-buttons">
+      <button class="game-key-btn" data-key="G">G</button>
+      <button class="game-key-btn" data-key="C">C</button>
+      <button class="game-key-btn" data-key="D">D</button>
+      <button class="game-key-btn" data-key="A">A</button>
+      <button class="game-key-btn" data-key="E">E</button>
+      <button class="game-key-btn" data-key="F">F</button>
+      <button class="game-key-btn" data-key="Bb">B♭</button>
+    </div>
+    <button id="game-start-btn">Play</button>
+  </div>
+  <canvas id="game-canvas" width="800" height="400"></canvas>
+  <div id="game-crt-overlay"></div>
+</div>
+
 <!-- Harmonic aurora visualizer (full-screen overlay) -->
 <div id="viz-screen">
   <canvas id="aurora-canvas"></canvas>
@@ -88,6 +114,6 @@
   </div>
 </div>
 
-<script src="dist/bundle.js" type="module"></script>
+<script src="/dist/bundle.js" type="module"></script>
 </body>
 </html>
