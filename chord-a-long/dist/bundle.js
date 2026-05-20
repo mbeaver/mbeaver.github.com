@@ -177,6 +177,7 @@ var QUALITY_SUFFIX = {
 };
 var MOOD_WORDS = {
   "warm-gold": "Tonic",
+  "subdominant": "Subdominant",
   "orange": "Dominant",
   "cool-blue": "Pre-dominant",
   "green": "Color",
@@ -199,8 +200,8 @@ var MAJOR_QUALITIES = ["maj", "min", "min", "maj", "dom7", "min", "dim"];
 var MINOR_QUALITIES = ["min", "dim", "maj", "min", "min", "maj", "maj"];
 var MAJOR_NUMERALS = ["1", "2m", "3m", "4", "5", "6m", "7\xB0"];
 var MINOR_NUMERALS = ["1m", "2\xB0", "3", "4m", "5m", "6", "7"];
-var MAJOR_COLORS = ["warm-gold", "cool-blue", "green", "warm-gold", "orange", "green", "purple"];
-var MINOR_COLORS = ["green", "purple", "warm-gold", "cool-blue", "cool-blue", "warm-gold", "orange"];
+var MAJOR_COLORS = ["warm-gold", "cool-blue", "green", "subdominant", "orange", "green", "purple"];
+var MINOR_COLORS = ["warm-gold", "purple", "green", "cool-blue", "cool-blue", "warm-gold", "orange"];
 var TENSION_SCORES = [0, 0.55, 0.25, 0.45, 0.85, 0.15, 1];
 var FLAT_KEYS = /* @__PURE__ */ new Set([5, 10, 3, 8, 1, 6]);
 function buildKey(tonic, mode) {
@@ -689,6 +690,7 @@ function buildDiagramSVG(voicing) {
 // src/ui/gps-panel.ts
 var COLOR_VAR = {
   "warm-gold": "var(--color-tonic)",
+  "subdominant": "var(--color-tonic)",
   "orange": "var(--color-dominant)",
   "cool-blue": "var(--color-subdominant)",
   "green": "var(--color-mediant)",
@@ -697,6 +699,7 @@ var COLOR_VAR = {
 };
 var MOOD = {
   "warm-gold": "Tonic",
+  "subdominant": "Subdominant",
   "orange": "Dominant",
   "cool-blue": "Pre-dominant",
   "green": "Color",
@@ -709,6 +712,7 @@ var currentVoicings = [];
 var activeShapeIdx = 0;
 var suggestions = [];
 var history = [];
+var suggShapeIdx = /* @__PURE__ */ new Map();
 var centerPanel;
 var leftPanel;
 var rightPanel;
@@ -752,6 +756,7 @@ function initGpsPanel() {
     activeShapeIdx = 0;
     suggestions = [];
     history = [];
+    suggShapeIdx.clear();
     historyBar.innerHTML = "";
     renderPlaceholder();
   });
@@ -880,26 +885,53 @@ function renderSuggestionCard(sug, container2) {
   const numeral = sug.nashvilleNumeral || resolvedNumeral(sug.chord);
   const mood = MOOD[color];
   const tensionPct = Math.round(sug.tensionScore * 100);
+  const voicings = resolveVoicings(sug.chord);
+  let activeIdx = Math.min(suggShapeIdx.get(sug.chord.name) ?? 0, Math.max(0, voicings.length - 1));
   const card = el("div", {
     class: "suggestion-card",
     style: `--card-color: ${COLOR_VAR[color]}`
   });
-  const barFill = el("div", { class: "sug-tension-fill", style: `width: ${tensionPct}%` });
-  const diagramEl = el("div", { class: "sug-diagram" });
-  const voicings = resolveVoicings(sug.chord);
-  const voicing = voicings[0];
-  if (voicing) diagramEl.innerHTML = buildDiagramSVG(voicing);
-  card.append(
-    el(
-      "div",
-      { class: "sug-header" },
-      el("div", { class: "sug-numeral", style: `color: ${COLOR_VAR[color]}` }, numeral),
-      el("div", { class: "sug-name" }, sug.chord.name),
-      el("div", { class: "sug-mood" }, mood)
-    ),
-    diagramEl,
-    el("div", { class: "sug-tension-bar" }, barFill)
-  );
+  function buildContents() {
+    card.innerHTML = "";
+    const diagramEl = el("div", { class: "sug-diagram" });
+    const voicing = voicings[activeIdx];
+    if (voicing) diagramEl.innerHTML = buildDiagramSVG(voicing);
+    const shapes = ["C", "A", "G", "E", "D"];
+    const shapeTabs = el("div", { class: "shape-tabs" });
+    for (const shape of shapes) {
+      const vIdx = voicings.findIndex((v) => v.shape === shape);
+      const available = vIdx !== -1;
+      const isActive2 = available && vIdx === activeIdx;
+      const btn = el("button", {
+        class: `shape-tab${isActive2 ? " active" : ""}${!available ? " disabled" : ""}`
+      }, shape);
+      btn.disabled = !available;
+      if (available) {
+        const capturedIdx = vIdx;
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          activeIdx = capturedIdx;
+          suggShapeIdx.set(sug.chord.name, capturedIdx);
+          buildContents();
+        });
+      }
+      shapeTabs.append(btn);
+    }
+    const barFill = el("div", { class: "sug-tension-fill", style: `width: ${tensionPct}%` });
+    card.append(
+      el(
+        "div",
+        { class: "sug-header" },
+        el("div", { class: "sug-numeral", style: `color: ${COLOR_VAR[color]}` }, numeral),
+        el("div", { class: "sug-name" }, sug.chord.name),
+        el("div", { class: "sug-mood" }, mood)
+      ),
+      diagramEl,
+      shapeTabs,
+      el("div", { class: "sug-tension-bar" }, barFill)
+    );
+  }
+  buildContents();
   card.addEventListener("click", () => {
     emit({ type: "chord:confirmed", chord: sug.chord, source: "manual" });
   });
@@ -2396,6 +2428,7 @@ var RING_POINTS = 80;
 var RINGS_PER_CHORD = 2;
 var COLOR_HEX = {
   "warm-gold": "#c49a14",
+  "subdominant": "#c49a14",
   "orange": "#d4621a",
   "cool-blue": "#3a72b8",
   "green": "#2d8a40",
@@ -2404,6 +2437,7 @@ var COLOR_HEX = {
 };
 var COLOR_RGB = {
   "warm-gold": [196, 154, 20],
+  "subdominant": [196, 154, 20],
   "orange": [212, 98, 26],
   "cool-blue": [58, 114, 184],
   "green": [45, 138, 64],
@@ -2412,6 +2446,7 @@ var COLOR_RGB = {
 };
 var COLOR_TENSION = {
   "warm-gold": 0.05,
+  "subdominant": 0.05,
   "cool-blue": 0.4,
   "green": 0.3,
   "orange": 0.85,
@@ -2442,6 +2477,7 @@ function initVisualizer() {
   const style = getComputedStyle(document.documentElement);
   const CSS_VAR_MAP = [
     ["warm-gold", "--color-tonic"],
+    ["subdominant", "--color-tonic"],
     ["orange", "--color-dominant"],
     ["cool-blue", "--color-subdominant"],
     ["green", "--color-mediant"],
