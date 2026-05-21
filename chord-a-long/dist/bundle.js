@@ -1203,6 +1203,12 @@ var DIFF_TABLE = [
   { minRound: 13, hp: 3, timer: 5, pool: ["2m", "3m", "4", "5", "6m", "7\xB0"] },
   { minRound: 21, hp: 4, timer: 3, pool: ["2m", "3m", "4", "5", "6m", "7\xB0"] }
 ];
+var DIFF_TABLE_MINOR = [
+  { minRound: 1, hp: 2, timer: 9, pool: ["4m", "5m", "6"] },
+  { minRound: 6, hp: 3, timer: 7, pool: ["2\xB0", "4m", "5m", "6"] },
+  { minRound: 13, hp: 3, timer: 5, pool: ["2\xB0", "3", "4m", "5m", "6", "7\xB0"] },
+  { minRound: 21, hp: 4, timer: 3, pool: ["2\xB0", "3", "4m", "5m", "6", "7\xB0"] }
+];
 var NUMERAL_DISPLAY = {
   "1": "I",
   "2m": "ii",
@@ -1210,7 +1216,14 @@ var NUMERAL_DISPLAY = {
   "4": "IV",
   "5": "V",
   "6m": "vi",
-  "7\xB0": "vii\xB0"
+  "7\xB0": "vii\xB0",
+  "1m": "i",
+  "2\xB0": "ii\xB0",
+  "3": "III",
+  "4m": "iv",
+  "5m": "v",
+  "6": "VI",
+  "7": "VII"
 };
 var ChordCasterGame = class {
   canvas;
@@ -1257,11 +1270,11 @@ var ChordCasterGame = class {
     this.generateStars();
   }
   // ── Public API ────────────────────────────────────────────────────────────
-  start(key) {
+  start(key, startRound = 1) {
     this.selectedKey = key;
     this.hull = 3;
     this.score = 0;
-    this.round = 0;
+    this.round = startRound;
     this.enemy = null;
     this.nextEnemyTimer = 0;
     this.particles = [];
@@ -1341,23 +1354,24 @@ var ChordCasterGame = class {
       this.onCorrectChord();
       return;
     }
-    switch (numeral) {
-      case "5":
-        this.castSpell("pushback", now);
-        break;
-      case "7\xB0":
-        this.castSpell("megablast", now);
-        break;
-      case "1":
-        this.castSpell("shield", now);
-        break;
-      case "4":
-        this.castSpell("heal", now);
-        break;
-      default:
-        this.checkDemand(numeral, now);
-        break;
+    const minor = this.selectedKey?.mode === "minor";
+    if (numeral === (minor ? "5m" : "5")) {
+      this.castSpell("pushback", now);
+      return;
     }
+    if (numeral === "7\xB0") {
+      this.castSpell("megablast", now);
+      return;
+    }
+    if (numeral === (minor ? "1m" : "1")) {
+      this.castSpell("shield", now);
+      return;
+    }
+    if (numeral === (minor ? "4m" : "4")) {
+      this.castSpell("heal", now);
+      return;
+    }
+    this.checkDemand(numeral, now);
   }
   handleClick(e) {
     if (this.status !== "gameover") return;
@@ -1438,8 +1452,9 @@ var ChordCasterGame = class {
   }
   // ── Private: difficulty helpers ───────────────────────────────────────────
   getDiffRow(round) {
-    let row = DIFF_TABLE[0];
-    for (const r of DIFF_TABLE) {
+    const table = this.selectedKey?.mode === "minor" ? DIFF_TABLE_MINOR : DIFF_TABLE;
+    let row = table[0];
+    for (const r of table) {
       if (round >= r.minRound) row = r;
     }
     return row;
@@ -1639,7 +1654,8 @@ var ChordCasterGame = class {
     this.spawnTutorialEnemy();
   }
   spawnTutorialEnemy() {
-    const demand = this.tutPhase === 0 ? "2m" : "5";
+    const minor = this.selectedKey?.mode === "minor";
+    const demand = this.tutPhase === 0 ? minor ? "2\xB0" : "2m" : minor ? "5m" : "5";
     this.enemy = {
       x: W2 + 20,
       y: H2 / 2 - Math.floor(ENEMY_H / 2),
@@ -2169,6 +2185,29 @@ var KEY_PC = {
   F: 5,
   Bb: 10
 };
+var MAJOR_BTN_DEFS = [
+  { numeral: "1", label: "I" },
+  { numeral: "2m", label: "ii" },
+  { numeral: "3m", label: "iii" },
+  { numeral: "4", label: "IV" },
+  { numeral: "5", label: "V" },
+  { numeral: "6m", label: "vi" },
+  { numeral: "7\xB0", label: "vii\xB0" }
+];
+var MINOR_BTN_DEFS = [
+  { numeral: "1m", label: "i" },
+  { numeral: "2\xB0", label: "ii\xB0" },
+  { numeral: "3", label: "III" },
+  { numeral: "4m", label: "iv" },
+  { numeral: "5m", label: "v" },
+  { numeral: "6", label: "VI" },
+  { numeral: "7\xB0", label: "vii\xB0" }
+];
+var DIFFICULTY_ROUNDS = {
+  beginner: 1,
+  intermediate: 6,
+  expert: 13
+};
 var game = null;
 function initGamePanel() {
   const gamePanel = qs("#game-panel");
@@ -2178,12 +2217,25 @@ function initGamePanel() {
   const skipTutBtn = qs("#game-tutorial-skip-btn");
   const toggleBtn = qs("#game-toggle-btn");
   const keyBtns = Array.from(document.querySelectorAll(".game-key-btn"));
+  const modeBtns = Array.from(document.querySelectorAll(".game-mode-btn"));
+  const diffBtns = Array.from(document.querySelectorAll(".game-diff-btn"));
   const chordBtns = Array.from(document.querySelectorAll(".game-chord-btn"));
   game = new ChordCasterGame(canvas3);
   game.onTutorialPhaseChange = (phase) => {
     skipTutBtn.classList.toggle("hidden", phase < 0);
   };
   let selectedKeyName = null;
+  let selectedMode2 = "major";
+  let selectedDifficulty = 1;
+  function updateChordBtns(mode) {
+    const defs = mode === "minor" ? MINOR_BTN_DEFS : MAJOR_BTN_DEFS;
+    chordBtns.forEach((btn, i) => {
+      const def = defs[i];
+      if (!def) return;
+      btn.dataset["numeral"] = def.numeral;
+      btn.textContent = def.label;
+    });
+  }
   toggleBtn.addEventListener("click", () => {
     const isOpen = !gamePanel.classList.contains("hidden");
     if (isOpen) {
@@ -2213,13 +2265,28 @@ function initGamePanel() {
       startBtn.classList.add("ready");
     });
   }
+  for (const btn of modeBtns) {
+    btn.addEventListener("click", () => {
+      modeBtns.forEach((b) => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      selectedMode2 = btn.dataset["mode"] ?? "major";
+      updateChordBtns(selectedMode2);
+    });
+  }
+  for (const btn of diffBtns) {
+    btn.addEventListener("click", () => {
+      diffBtns.forEach((b) => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      selectedDifficulty = DIFFICULTY_ROUNDS[btn.dataset["diff"] ?? "beginner"] ?? 1;
+    });
+  }
   startBtn.addEventListener("click", () => {
     if (!selectedKeyName) return;
     const pc = KEY_PC[selectedKeyName];
     if (pc === void 0) return;
-    const key = buildKey(pc, "major");
+    const key = buildKey(pc, selectedMode2);
     gamePanel.classList.add("game-running");
-    game.start(key);
+    game.start(key, selectedDifficulty);
   });
   canvas3.addEventListener("click", (e) => game?.handleClick(e));
   for (const btn of chordBtns) {

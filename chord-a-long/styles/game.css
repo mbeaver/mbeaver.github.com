@@ -104,6 +104,44 @@
   color: #0d0d1a;
 }
 
+.mode-buttons,
+.difficulty-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.game-mode-btn,
+.game-diff-btn {
+  padding: 6px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: border-color 0.12s, background 0.12s, color 0.12s;
+}
+
+.game-mode-btn:hover,
+.game-diff-btn:hover {
+  border-color: var(--color-tonic);
+  color: var(--text);
+}
+
+.game-mode-btn.selected {
+  background: var(--color-tonic);
+  border-color: var(--color-tonic);
+  color: #0d0d1a;
+}
+
+.game-diff-btn.selected {
+  background: var(--surface-2);
+  border-color: var(--color-dominant);
+  color: var(--color-dominant);
+}
+
 #game-start-btn {
   padding: 10px 32px;
   background: var(--color-dominant);

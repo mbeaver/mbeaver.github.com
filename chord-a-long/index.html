@@ -4,12 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chord-A-Long</title>
-  <link rel="stylesheet" href="styles/reset.css" />
-  <link rel="stylesheet" href="styles/layout.css" />
-  <link rel="stylesheet" href="styles/gps.css" />
-  <link rel="stylesheet" href="styles/log.css" />
-  <link rel="stylesheet" href="styles/visualizer.css" />
-  <link rel="stylesheet" href="styles/game.css" />
+  <link rel="stylesheet" href="/styles/reset.css" />
+  <link rel="stylesheet" href="/styles/layout.css" />
+  <link rel="stylesheet" href="/styles/gps.css" />
+  <link rel="stylesheet" href="/styles/log.css" />
+  <link rel="stylesheet" href="/styles/visualizer.css" />
+  <link rel="stylesheet" href="/styles/game.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
@@ -94,6 +94,15 @@
       <button class="game-key-btn" data-key="F">F</button>
       <button class="game-key-btn" data-key="Bb">B♭</button>
     </div>
+    <div class="mode-buttons">
+      <button class="game-mode-btn selected" data-mode="major">Major</button>
+      <button class="game-mode-btn" data-mode="minor">Minor</button>
+    </div>
+    <div class="difficulty-buttons">
+      <button class="game-diff-btn selected" data-diff="beginner">Beginner</button>
+      <button class="game-diff-btn" data-diff="intermediate">Intermediate</button>
+      <button class="game-diff-btn" data-diff="expert">Expert</button>
+    </div>
     <button id="game-start-btn">Play</button>
   </div>
   <canvas id="game-canvas" width="800" height="400"></canvas>
@@ -123,6 +132,6 @@
   </div>
 </div>
 
-<script src="dist/bundle.js" type="module"></script>
+<script src="/dist/bundle.js" type="module"></script>
 </body>
 </html>
