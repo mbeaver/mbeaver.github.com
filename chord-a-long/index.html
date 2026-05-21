@@ -4,12 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chord-A-Long</title>
-  <link rel="stylesheet" href="styles/reset.css" />
-  <link rel="stylesheet" href="styles/layout.css" />
-  <link rel="stylesheet" href="styles/gps.css" />
-  <link rel="stylesheet" href="styles/log.css" />
-  <link rel="stylesheet" href="styles/visualizer.css" />
-  <link rel="stylesheet" href="styles/game.css" />
+  <link rel="stylesheet" href="/styles/reset.css" />
+  <link rel="stylesheet" href="/styles/layout.css" />
+  <link rel="stylesheet" href="/styles/gps.css" />
+  <link rel="stylesheet" href="/styles/log.css" />
+  <link rel="stylesheet" href="/styles/visualizer.css" />
+  <link rel="stylesheet" href="/styles/game.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
@@ -97,6 +97,15 @@
     <button id="game-start-btn">Play</button>
   </div>
   <canvas id="game-canvas" width="800" height="400"></canvas>
+  <div id="game-chord-btns">
+    <button class="game-chord-btn" data-numeral="1">I</button>
+    <button class="game-chord-btn" data-numeral="2m">ii</button>
+    <button class="game-chord-btn" data-numeral="3m">iii</button>
+    <button class="game-chord-btn" data-numeral="4">IV</button>
+    <button class="game-chord-btn" data-numeral="5">V</button>
+    <button class="game-chord-btn" data-numeral="6m">vi</button>
+    <button class="game-chord-btn" data-numeral="7°">vii°</button>
+  </div>
   <div id="game-crt-overlay"></div>
 </div>
 
@@ -114,6 +123,6 @@
   </div>
 </div>
 
-<script src="dist/bundle.js" type="module"></script>
+<script src="/dist/bundle.js" type="module"></script>
 </body>
 </html>

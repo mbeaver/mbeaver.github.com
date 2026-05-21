@@ -133,7 +133,7 @@
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   max-width: 100%;
-  max-height: calc(100vh - 60px);
+  max-height: calc(100vh - 120px);
   box-shadow:
     0 0 0 1px var(--border),
     0 0 24px 4px rgba(212, 98, 26, 0.25),
@@ -158,6 +158,37 @@
   z-index: 102;
 }
 
+/* ── Chord test buttons ──────────────────────────────────────────── */
+
+#game-chord-btns {
+  display: none;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.game-chord-btn {
+  padding: 6px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-dim);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  cursor: pointer;
+  transition: border-color 0.1s, color 0.1s, background 0.1s;
+  min-width: 44px;
+}
+
+.game-chord-btn:hover {
+  border-color: var(--color-dominant);
+  color: var(--color-dominant);
+}
+
+.game-chord-btn:active {
+  background: var(--color-dominant);
+  color: #0d0d1a;
+}
+
 /* ── Game-active state: hide key selector, show canvas + CRT ─────── */
 
 #game-panel.game-running #game-key-select {
@@ -166,6 +197,10 @@
 
 #game-panel.game-running #game-canvas {
   display: block;
+}
+
+#game-panel.game-running #game-chord-btns {
+  display: flex;
 }
 
 #game-panel.game-running #game-crt-overlay {

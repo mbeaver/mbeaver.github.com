@@ -1168,34 +1168,50 @@ function handleExport() {
   });
 }
 
-// src/game/wave-data.ts
-var WAVES = [
-  { label: "I\u2013IV\u2013V Blues Wave", rows: 2, cols: 8, speed: 30 },
-  { label: "ii\u2013V\u2013I Cadential Wave", rows: 3, cols: 8, speed: 40 },
-  { label: "I\u2013V\u2013VIm\u2013IV Pop Wave", rows: 3, cols: 10, speed: 45 },
-  { label: "IV\u2013I\u2013V\u2013V Plagal Wave", rows: 4, cols: 10, speed: 50 },
-  { label: "I\u2013IIm\u2013V\u2013I Jazz Turnaround", rows: 4, cols: 12, speed: 55 }
-];
-
 // src/game/chord-caster.ts
 var W2 = 800;
 var H2 = 400;
 var SHIP_X = 60;
-var EVADE_COOLDOWN_MS = 1500;
-var EVADE_DODGE_PX = 130;
-var EVADE_DUR = 0.5;
-var ENEMY_W = 20;
-var ENEMY_H = 14;
-var ENEMY_COL_SPACING = 48;
-var ENEMY_ROW_SPACING = 32;
-var ENEMY_START_Y = 44;
-var PROJ_W = 18;
-var PROJ_H = 6;
-var PROJ_SPEED = 500;
+var SHIP_Y = H2 / 2;
 var SHIELD_FLASH_DUR = 0.35;
-var WAVE_LABEL_DUR = 3;
 var PARTICLE_DUR = 0.6;
 var NUM_STARS = 80;
+var BASE_SPEED = 80;
+var DEMAND_X_ENTER = 560;
+var CONTACT_X = 100;
+var PUSHBACK_PX = 120;
+var LUNGE_PX = 60;
+var RECOIL_PX = 30;
+var ANIM_RECOIL = 0.28;
+var ANIM_LUNGE = 0.18;
+var ANIM_PUSHED = 0.3;
+var ANIM_EXPLODING = 0.9;
+var BLASTER_DUR = 0.45;
+var ENEMY_BLAST_DUR = 0.55;
+var SHIP_DAMAGE_FLASH = 0.55;
+var ENEMY_W = 90;
+var ENEMY_H = 68;
+var V_COOLDOWN_MS = 2e3;
+var VII_COOLDOWN_MS = 3e4;
+var SHIELD_COOLDOWN_MS = 800;
+var HEAL_COOLDOWN_MS = 4e3;
+var NEXT_ENEMY_DELAY = 1.5;
+var DYING_DUR = 2.4;
+var DIFF_TABLE = [
+  { minRound: 1, hp: 2, timer: 9, pool: ["4", "5", "6m"] },
+  { minRound: 6, hp: 3, timer: 7, pool: ["2m", "4", "5", "6m"] },
+  { minRound: 13, hp: 3, timer: 5, pool: ["2m", "3m", "4", "5", "6m", "7\xB0"] },
+  { minRound: 21, hp: 4, timer: 3, pool: ["2m", "3m", "4", "5", "6m", "7\xB0"] }
+];
+var NUMERAL_DISPLAY = {
+  "1": "I",
+  "2m": "ii",
+  "3m": "iii",
+  "4": "IV",
+  "5": "V",
+  "6m": "vi",
+  "7\xB0": "vii\xB0"
+};
 var ChordCasterGame = class {
   canvas;
   ctx;
@@ -1203,39 +1219,35 @@ var ChordCasterGame = class {
   lastTime = 0;
   status = "idle";
   selectedKey = null;
-  targetY = H2 / 2;
-  targetX = SHIP_X;
-  shipY = H2 / 2;
-  shipX = SHIP_X;
+  shipBob = 0;
   hull = 3;
   score = 0;
-  waveIndex = 0;
-  waveLabel = "";
-  waveLabelTimer = 0;
-  enemies = [];
-  projectiles = [];
+  round = 0;
+  enemy = null;
+  nextEnemyTimer = 0;
   particles = [];
   shieldActive = false;
   shieldFlashTimer = 0;
   healFlashTimer = 0;
-  evadeTimer = 0;
-  lastEvadeTime = 0;
-  spellCooldowns = { fire: 0, shield: 0, heal: 0, rapidFire: 0 };
-  rapidFireQueue = 0;
-  rapidFireTimer = 0;
+  shieldCooldownEnd = 0;
+  healCooldownEnd = 0;
+  vCooldownEnd = 0;
+  viiCooldownEnd = 0;
   stars = [];
   countdownValue = 3;
   countdownTimer = 1;
-  enemySpeed = 30;
-  // Tutorial state
+  blasterTimer = 0;
+  enemyBlastTimer = 0;
+  enemyBlastFromX = 0;
+  shipDamageFlashTimer = 0;
   tutPhase = 0;
-  // 0=steer, 1=fire, 2=done
   tutTimer = 0;
-  tutTargetY = H2 / 2;
-  tutFired = false;
+  tutAdvanced = false;
   onTutorialPhaseChange;
   colorDominant = "#d4621a";
   colorTonic = "#c9a227";
+  dyingTimer = 0;
+  lastEnemyDemand = null;
   onGameOver;
   constructor(canvas3) {
     this.canvas = canvas3;
@@ -1244,27 +1256,29 @@ var ChordCasterGame = class {
     this.ctx = ctx3;
     this.generateStars();
   }
-  // ── Public API ───────────────────────────────────────────────────────────
+  // ── Public API ────────────────────────────────────────────────────────────
   start(key) {
     this.selectedKey = key;
     this.hull = 3;
     this.score = 0;
-    this.waveIndex = 0;
-    this.enemies = [];
-    this.projectiles = [];
+    this.round = 0;
+    this.enemy = null;
+    this.nextEnemyTimer = 0;
     this.particles = [];
     this.shieldActive = false;
     this.shieldFlashTimer = 0;
     this.healFlashTimer = 0;
-    this.spellCooldowns = { fire: 0, shield: 0, heal: 0, rapidFire: 0 };
-    this.rapidFireQueue = 0;
-    this.rapidFireTimer = 0;
-    this.shipY = H2 / 2;
-    this.shipX = SHIP_X;
-    this.targetY = H2 / 2;
-    this.targetX = SHIP_X;
-    this.evadeTimer = 0;
-    this.lastEvadeTime = 0;
+    this.blasterTimer = 0;
+    this.enemyBlastTimer = 0;
+    this.enemyBlastFromX = 0;
+    this.shipDamageFlashTimer = 0;
+    this.dyingTimer = 0;
+    this.lastEnemyDemand = null;
+    this.shieldCooldownEnd = 0;
+    this.healCooldownEnd = 0;
+    this.vCooldownEnd = 0;
+    this.viiCooldownEnd = 0;
+    this.shipBob = 0;
     this.countdownValue = 3;
     this.countdownTimer = 1;
     this.status = "countdown";
@@ -1280,43 +1294,70 @@ var ChordCasterGame = class {
   }
   skipTutorial() {
     if (this.status !== "tutorial") return;
-    this.enemies = [];
-    this.projectiles = [];
+    this.enemy = null;
     this.status = "playing";
-    this.spawnWave(0);
+    this.spawnNextEnemy();
     this.onTutorialPhaseChange?.(-1);
   }
-  castSpell(numeral, now) {
+  castSpell(spell, now) {
     if (this.status !== "playing" && this.status !== "tutorial") return;
-    if (numeral === "5" && now > this.spellCooldowns.fire) {
-      if (this.status === "playing") this.snapToNearestEnemyRow();
-      this.spawnProjectile();
-      this.tutFired = true;
-      this.spellCooldowns.fire = now + 400;
-    } else if (numeral === "7\xB0" && now > this.spellCooldowns.rapidFire) {
-      this.snapToNearestEnemyRow();
-      this.rapidFireQueue = 10;
-      this.rapidFireTimer = 0;
-      this.spellCooldowns.rapidFire = now + 4e3;
-    } else if (numeral === "1" && now > this.spellCooldowns.shield) {
-      this.shieldActive = true;
-      this.spellCooldowns.shield = now + 800;
-    } else if (numeral === "4" && now > this.spellCooldowns.heal && this.hull < 3) {
-      this.hull++;
-      this.healFlashTimer = 0.5;
-      this.spellCooldowns.heal = now + 4e3;
+    let acted = false;
+    if (spell === "pushback") {
+      acted = this.onVPushback(now);
+    } else if (spell === "megablast") {
+      acted = this.onMegaBlast(now);
+    } else if (spell === "shield") {
+      if (now > this.shieldCooldownEnd) {
+        this.shieldActive = true;
+        this.shieldCooldownEnd = now + SHIELD_COOLDOWN_MS;
+        acted = true;
+      }
+    } else if (spell === "heal") {
+      if (now > this.healCooldownEnd && this.hull < 3) {
+        this.hull++;
+        this.healFlashTimer = 0.5;
+        this.healCooldownEnd = now + HEAL_COOLDOWN_MS;
+        acted = true;
+      }
+    }
+    if (acted && this.status === "tutorial") this.tutAdvanced = true;
+  }
+  checkDemand(numeral, now) {
+    if (!this.enemy) return;
+    const state2 = this.enemy.state;
+    if (state2 !== "demanding" && state2 !== "recoil") return;
+    if (numeral === this.enemy.demand) {
+      this.onCorrectChord();
+    } else {
+      this.onWrongChord();
     }
   }
-  triggerEvade(now) {
+  // Single entry point for all player chord input — demand check beats special abilities.
+  // This prevents IV (heal) from swallowing a demanded '4' before checkDemand sees it.
+  playNumeral(numeral, now) {
     if (this.status !== "playing" && this.status !== "tutorial") return;
-    if (now - this.lastEvadeTime < EVADE_COOLDOWN_MS) return;
-    this.lastEvadeTime = now;
-    this.evadeTimer = EVADE_DUR;
-    const nearby = this.enemies.filter((e) => e.x > this.shipX && e.x < this.shipX + 250);
-    const above = nearby.filter((e) => e.y < this.shipY).length;
-    const below = nearby.filter((e) => e.y > this.shipY).length;
-    const dodgeUp = below >= above;
-    this.targetY = dodgeUp ? Math.max(20, this.shipY - EVADE_DODGE_PX) : Math.min(H2 - 20, this.shipY + EVADE_DODGE_PX);
+    const e = this.enemy;
+    if (e && (e.state === "demanding" || e.state === "recoil") && numeral === e.demand) {
+      this.onCorrectChord();
+      return;
+    }
+    switch (numeral) {
+      case "5":
+        this.castSpell("pushback", now);
+        break;
+      case "7\xB0":
+        this.castSpell("megablast", now);
+        break;
+      case "1":
+        this.castSpell("shield", now);
+        break;
+      case "4":
+        this.castSpell("heal", now);
+        break;
+      default:
+        this.checkDemand(numeral, now);
+        break;
+    }
   }
   handleClick(e) {
     if (this.status !== "gameover") return;
@@ -1326,6 +1367,107 @@ var ChordCasterGame = class {
     if (x >= 290 && x <= 510 && y >= 250 && y <= 290) {
       if (this.selectedKey) this.start(this.selectedKey);
     }
+  }
+  // ── Private: chord actions ────────────────────────────────────────────────
+  onCorrectChord() {
+    const e = this.enemy;
+    if (!e) return;
+    this.score += 50;
+    e.hp--;
+    this.blasterTimer = BLASTER_DUR;
+    if (e.hp <= 0) {
+      const speedBonus = Math.floor(e.timer * 15);
+      this.score += 100 + speedBonus;
+      if (this.status === "playing") this.round++;
+      this.lastEnemyDemand = e.demand;
+      this.triggerExplosion(e);
+    } else {
+      e.x += RECOIL_PX;
+      e.state = "recoil";
+      e.stateTimer = ANIM_RECOIL;
+      e.flashColor = "#ffffff";
+      const pool = this.getDiffRow(this.round).pool;
+      e.recentDemands.push(e.demand);
+      if (e.recentDemands.length > 2) e.recentDemands.shift();
+      e.demand = this.pickDemand(pool, e.recentDemands);
+      e.timer = e.maxTimer;
+    }
+    if (this.status === "tutorial") this.tutAdvanced = true;
+  }
+  triggerExplosion(e) {
+    e.state = "exploding";
+    e.stateTimer = ANIM_EXPLODING;
+    const cx = e.x + ENEMY_W / 2;
+    const cy = e.y + ENEMY_H / 2;
+    this.spawnParticles(cx, cy, 24, this.colorDominant);
+    this.spawnParticles(cx, cy, 16, "#ff4400");
+    this.spawnParticles(cx, cy, 12, "#ffcc00");
+    this.spawnParticles(cx, cy, 8, "#ffffff");
+  }
+  onWrongChord() {
+    const e = this.enemy;
+    if (!e) return;
+    e.x -= LUNGE_PX;
+    e.state = "lunge";
+    e.stateTimer = ANIM_LUNGE;
+    e.flashColor = "#ff3333";
+  }
+  onVPushback(now) {
+    if (now < this.vCooldownEnd) return false;
+    const e = this.enemy;
+    if (!e || e.state === "retreating") return false;
+    this.vCooldownEnd = now + V_COOLDOWN_MS;
+    e.x += PUSHBACK_PX;
+    e.timer = e.maxTimer;
+    e.state = "pushed";
+    e.stateTimer = ANIM_PUSHED;
+    e.flashColor = "#ff8800";
+    return true;
+  }
+  onMegaBlast(now) {
+    if (now < this.viiCooldownEnd) return false;
+    const e = this.enemy;
+    if (!e || e.state === "retreating" || e.state === "exploding") return false;
+    this.viiCooldownEnd = now + VII_COOLDOWN_MS;
+    if (this.status === "playing") {
+      this.score += 150;
+      this.round++;
+    }
+    this.triggerExplosion(e);
+    return true;
+  }
+  // ── Private: difficulty helpers ───────────────────────────────────────────
+  getDiffRow(round) {
+    let row = DIFF_TABLE[0];
+    for (const r of DIFF_TABLE) {
+      if (round >= r.minRound) row = r;
+    }
+    return row;
+  }
+  pickDemand(pool, exclude = []) {
+    const choices = pool.filter((n) => !exclude.includes(n));
+    const arr = choices.length > 0 ? choices : pool;
+    return arr[Math.floor(Math.random() * arr.length)];
+  }
+  spawnNextEnemy() {
+    const diff = this.getDiffRow(this.round);
+    const speed = BASE_SPEED * (1 + this.round * 0.04);
+    const exclude = this.lastEnemyDemand ? [this.lastEnemyDemand] : [];
+    const demand = this.pickDemand(diff.pool, exclude);
+    this.enemy = {
+      x: W2 + 20,
+      y: H2 / 2 - Math.floor(ENEMY_H / 2),
+      hp: diff.hp,
+      maxHp: diff.hp,
+      demand,
+      timer: diff.timer,
+      maxTimer: diff.timer,
+      state: "approaching",
+      speed,
+      stateTimer: 0,
+      flashColor: "#ffffff",
+      recentDemands: [demand]
+    };
   }
   // ── Private: init ─────────────────────────────────────────────────────────
   generateStars() {
@@ -1370,93 +1512,170 @@ var ChordCasterGame = class {
       }
       return;
     }
+    if (this.status === "dying") {
+      this.dyingTimer -= dt;
+      if (this.enemyBlastTimer > 0) this.enemyBlastTimer -= dt;
+      for (const p of this.particles) {
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.life -= dt / PARTICLE_DUR;
+      }
+      this.particles = this.particles.filter((p) => p.life > 0);
+      if (this.dyingTimer <= 0) {
+        this.status = "gameover";
+        this.onGameOver?.(this.score);
+      }
+      return;
+    }
     const inPlay = this.status === "playing" || this.status === "tutorial";
     if (!inPlay) return;
-    this.shipY += (this.targetY - this.shipY) * (1 - Math.pow(0.88, dt * 60));
-    this.shipX += (this.targetX - this.shipX) * (1 - Math.pow(0.88, dt * 60));
-    if (this.evadeTimer > 0) this.evadeTimer -= dt;
-    if (this.rapidFireQueue > 0) {
-      this.rapidFireTimer -= dt;
-      if (this.rapidFireTimer <= 0) {
-        this.spawnProjectile();
-        this.rapidFireQueue--;
-        this.rapidFireTimer = 0.08;
-      }
-    }
-    for (const p of this.projectiles) p.x += PROJ_SPEED * dt;
-    for (const e of this.enemies) e.x -= this.enemySpeed * dt;
-    for (const proj of this.projectiles) {
-      if (proj.dead) continue;
-      for (const enemy of this.enemies) {
-        if (enemy.dead) continue;
-        if (proj.x < enemy.x + ENEMY_W && proj.x + PROJ_W > enemy.x && proj.y < enemy.y + ENEMY_H && proj.y + PROJ_H > enemy.y) {
-          proj.dead = true;
-          enemy.dead = true;
-          if (this.status === "playing") this.score += 10;
-          this.spawnParticles(enemy.x + ENEMY_W / 2, enemy.y + ENEMY_H / 2);
-        }
-      }
-    }
-    for (const enemy of this.enemies) {
-      if (enemy.dead || enemy.x + ENEMY_W > 0) continue;
-      enemy.dead = true;
-      if (this.status === "tutorial") continue;
-      if (this.shieldActive) {
-        this.shieldActive = false;
-        this.shieldFlashTimer = SHIELD_FLASH_DUR;
-      } else {
-        this.hull--;
-        if (this.hull <= 0) {
-          this.hull = 0;
-          this.status = "gameover";
-          this.onGameOver?.(this.score);
-          return;
-        }
-      }
-    }
-    this.projectiles = this.projectiles.filter((p) => !p.dead && p.x < W2 + PROJ_W);
-    this.enemies = this.enemies.filter((e) => !e.dead);
+    this.shipBob += dt;
+    if (this.shieldFlashTimer > 0) this.shieldFlashTimer -= dt;
+    if (this.healFlashTimer > 0) this.healFlashTimer -= dt;
+    if (this.blasterTimer > 0) this.blasterTimer -= dt;
+    if (this.enemyBlastTimer > 0) this.enemyBlastTimer -= dt;
+    if (this.shipDamageFlashTimer > 0) this.shipDamageFlashTimer -= dt;
     for (const p of this.particles) {
       p.x += p.vx * dt;
       p.y += p.vy * dt;
       p.life -= dt / PARTICLE_DUR;
     }
     this.particles = this.particles.filter((p) => p.life > 0);
-    if (this.waveLabelTimer > 0) this.waveLabelTimer -= dt;
-    if (this.shieldFlashTimer > 0) this.shieldFlashTimer -= dt;
-    if (this.healFlashTimer > 0) this.healFlashTimer -= dt;
-    if (this.status === "tutorial") {
-      this.updateTutorial(dt);
-    } else if (this.enemies.length === 0) {
-      this.waveIndex++;
-      this.spawnWave(this.waveIndex);
+    if (this.enemy) {
+      this.updateEnemy(dt);
+    } else if (this.nextEnemyTimer > 0) {
+      this.nextEnemyTimer -= dt;
+      if (this.nextEnemyTimer <= 0) {
+        if (this.status === "tutorial") {
+          this.advanceTutorialPhase();
+        } else {
+          this.spawnNextEnemy();
+        }
+      }
     }
+    if (this.status === "tutorial") this.updateTutorial(dt);
+  }
+  updateEnemy(dt) {
+    const e = this.enemy;
+    if (e.stateTimer > 0) {
+      e.stateTimer -= dt;
+      if (e.stateTimer <= 0) {
+        e.stateTimer = 0;
+        if (e.state === "exploding") {
+          this.enemy = null;
+          this.nextEnemyTimer = NEXT_ENEMY_DELAY;
+          return;
+        }
+        if (e.state === "recoil" || e.state === "lunge" || e.state === "pushed") {
+          e.state = e.x < DEMAND_X_ENTER ? "demanding" : "approaching";
+        }
+      }
+      return;
+    }
+    if (e.state === "approaching") {
+      e.x -= e.speed * dt;
+      if (e.x < DEMAND_X_ENTER) e.state = "demanding";
+    } else if (e.state === "demanding") {
+      e.x -= e.speed * 0.55 * dt;
+      e.timer -= dt;
+      const inPlay = this.status === "playing" || this.status === "tutorial";
+      if (e.x <= CONTACT_X) {
+        e.x = CONTACT_X;
+        this.enemyFireBlast();
+        if (inPlay) e.state = "retreating";
+      } else if (e.timer <= 0) {
+        e.timer = 0;
+        this.enemyFireBlast();
+        if (inPlay) e.state = "retreating";
+      } else if (e.x < 0) {
+        this.enemyFireBlast();
+        if (inPlay) e.state = "retreating";
+      }
+    } else if (e.state === "retreating") {
+      e.x += e.speed * 4 * dt;
+      if (e.x > W2 + 60) {
+        this.enemy = null;
+        this.nextEnemyTimer = NEXT_ENEMY_DELAY;
+      }
+    }
+  }
+  enemyFireBlast() {
+    if (this.enemy) {
+      this.enemyBlastTimer = ENEMY_BLAST_DUR;
+      this.enemyBlastFromX = this.enemy.x;
+    }
+    if (this.shieldActive) {
+      this.shieldActive = false;
+      this.shieldFlashTimer = SHIELD_FLASH_DUR;
+      return;
+    }
+    this.hull--;
+    if (this.hull <= 0) {
+      this.hull = 0;
+      this.enemy = null;
+      this.status = "dying";
+      this.dyingTimer = DYING_DUR;
+      this.spawnShipExplosion();
+    } else {
+      this.shipDamageFlashTimer = SHIP_DAMAGE_FLASH;
+    }
+  }
+  spawnShipExplosion() {
+    this.spawnParticles(SHIP_X, SHIP_Y, 28, "#99ccff");
+    this.spawnParticles(SHIP_X, SHIP_Y, 20, "#ff4400");
+    this.spawnParticles(SHIP_X, SHIP_Y, 16, "#ffcc00");
+    this.spawnParticles(SHIP_X, SHIP_Y, 10, "#ffffff");
+    this.spawnParticles(SHIP_X, SHIP_Y, 12, "#ff8800");
+    this.spawnParticles(SHIP_X, SHIP_Y, 8, "#aaddff");
+  }
+  // ── Private: tutorial ─────────────────────────────────────────────────────
+  startTutorial() {
+    this.status = "tutorial";
+    this.tutPhase = 0;
+    this.tutTimer = 0;
+    this.tutAdvanced = false;
+    this.enemy = null;
+    this.onTutorialPhaseChange?.(0);
+    this.spawnTutorialEnemy();
+  }
+  spawnTutorialEnemy() {
+    const demand = this.tutPhase === 0 ? "2m" : "5";
+    this.enemy = {
+      x: W2 + 20,
+      y: H2 / 2 - Math.floor(ENEMY_H / 2),
+      hp: 1,
+      maxHp: 1,
+      demand,
+      timer: 12,
+      maxTimer: 12,
+      state: "approaching",
+      speed: 20,
+      stateTimer: 0,
+      flashColor: "#ffffff",
+      recentDemands: [demand]
+    };
   }
   updateTutorial(dt) {
     this.tutTimer += dt;
-    if (this.tutPhase === 0) {
-      if (Math.abs(this.shipY - this.tutTargetY) < 35 || this.tutTimer > 8) {
-        this.advanceTutorialPhase();
-      }
-    } else if (this.tutPhase === 1) {
-      if (this.tutFired || this.enemies.length === 0 || this.tutTimer > 8) {
-        this.advanceTutorialPhase();
-      }
-    } else if (this.tutPhase === 2) {
-      if (this.tutTimer > 1.5) {
-        this.status = "playing";
-        this.spawnWave(0);
-        this.onTutorialPhaseChange?.(-1);
-      }
+    const timeout = this.tutPhase === 0 ? 10 : 8;
+    if ((this.tutAdvanced || this.tutTimer > timeout) && this.tutPhase < 2) {
+      this.tutAdvanced = false;
+      this.advanceTutorialPhase();
+    } else if (this.tutPhase === 2 && this.tutTimer > 1.5) {
+      this.status = "playing";
+      this.spawnNextEnemy();
+      this.onTutorialPhaseChange?.(-1);
     }
   }
   advanceTutorialPhase() {
     this.tutPhase = this.tutPhase + 1;
     this.tutTimer = 0;
+    this.tutAdvanced = false;
     this.onTutorialPhaseChange?.(this.tutPhase);
+    this.enemy = null;
     if (this.tutPhase === 1) {
-      this.tutFired = false;
-      this.spawnTutorialEnemies();
+      this.nextEnemyTimer = 0;
+      this.spawnTutorialEnemy();
     }
   }
   // ── Private: render ───────────────────────────────────────────────────────
@@ -1473,6 +1692,10 @@ var ChordCasterGame = class {
       this.renderCountdown();
       return;
     }
+    if (this.status === "dying") {
+      this.renderDying();
+      return;
+    }
     if (this.status === "gameover") {
       this.renderGameOver();
       return;
@@ -1484,19 +1707,21 @@ var ChordCasterGame = class {
       ctx3.fillRect(p.x - 2, p.y - 2, 4, 4);
     }
     ctx3.globalAlpha = 1;
-    for (const e of this.enemies) this.drawEnemy(e.x, e.y);
-    for (const p of this.projectiles) this.drawProjectile(p.x, p.y);
-    if (this.evadeTimer > 0) {
-      ctx3.globalAlpha = 0.4 + 0.6 * Math.abs(Math.sin(Date.now() / 40));
+    if (this.enemy) this.drawEnemy(this.enemy);
+    const bobY = SHIP_Y + Math.sin(this.shipBob * 1.8) * 3;
+    if (this.blasterTimer > 0 && this.enemy) {
+      this.drawBlasterBeam(this.enemy.x, Math.round(bobY));
     }
-    this.drawShip(Math.round(this.shipX), Math.round(this.shipY));
-    ctx3.globalAlpha = 1;
+    if (this.enemyBlastTimer > 0) {
+      this.drawEnemyBlastBeam(this.enemyBlastFromX, Math.round(bobY));
+    }
+    this.drawShip(SHIP_X, Math.round(bobY));
     if (this.shieldActive) {
       ctx3.strokeStyle = this.colorTonic;
       ctx3.lineWidth = 2;
       ctx3.globalAlpha = 0.7 + 0.3 * Math.sin(Date.now() / 200);
       ctx3.beginPath();
-      ctx3.arc(this.shipX, this.shipY, 24, 0, Math.PI * 2);
+      ctx3.arc(SHIP_X, bobY, 24, 0, Math.PI * 2);
       ctx3.stroke();
       ctx3.globalAlpha = 1;
     }
@@ -1504,7 +1729,15 @@ var ChordCasterGame = class {
       ctx3.fillStyle = this.colorTonic;
       ctx3.globalAlpha = this.shieldFlashTimer / SHIELD_FLASH_DUR * 0.45;
       ctx3.beginPath();
-      ctx3.arc(this.shipX, this.shipY, 32, 0, Math.PI * 2);
+      ctx3.arc(SHIP_X, bobY, 32, 0, Math.PI * 2);
+      ctx3.fill();
+      ctx3.globalAlpha = 1;
+    }
+    if (this.shipDamageFlashTimer > 0) {
+      ctx3.fillStyle = "#ff2200";
+      ctx3.globalAlpha = this.shipDamageFlashTimer / SHIP_DAMAGE_FLASH * 0.65;
+      ctx3.beginPath();
+      ctx3.arc(SHIP_X, bobY, 36, 0, Math.PI * 2);
       ctx3.fill();
       ctx3.globalAlpha = 1;
     }
@@ -1515,8 +1748,58 @@ var ChordCasterGame = class {
       ctx3.globalAlpha = 1;
     }
     this.renderHUD();
-    this.renderWaveLabel();
     if (this.status === "tutorial") this.renderTutorialOverlay();
+  }
+  renderDying() {
+    const { ctx: ctx3 } = this;
+    const elapsed = DYING_DUR - this.dyingTimer;
+    const progress = elapsed / DYING_DUR;
+    const shakeAmt = Math.max(0, (0.75 - elapsed) / 0.75) * 16;
+    const ox = shakeAmt > 0 ? (Math.random() - 0.5) * shakeAmt * 2 : 0;
+    const oy = shakeAmt > 0 ? (Math.random() - 0.5) * shakeAmt * 2 : 0;
+    ctx3.save();
+    ctx3.translate(ox, oy);
+    for (const s of this.stars) {
+      ctx3.fillStyle = "rgba(255,255,255,0.8)";
+      ctx3.fillRect(s.x, s.y, 1, 1);
+    }
+    if (this.enemyBlastTimer > 0) {
+      this.drawEnemyBlastBeam(this.enemyBlastFromX, SHIP_Y);
+    }
+    for (const p of this.particles) {
+      ctx3.globalAlpha = Math.max(0, p.life);
+      ctx3.fillStyle = p.color;
+      ctx3.fillRect(p.x - 2, p.y - 2, 4, 4);
+    }
+    ctx3.globalAlpha = 1;
+    if (elapsed < 0.35) {
+      const t = elapsed / 0.35;
+      ctx3.fillStyle = t < 0.4 ? "#ffffff" : "#ff4400";
+      ctx3.globalAlpha = (1 - t) * 0.9;
+      ctx3.fillRect(-20, -20, W2 + 40, H2 + 40);
+      ctx3.globalAlpha = 1;
+    }
+    ctx3.restore();
+    if (progress > 0.45) {
+      const darkAlpha = Math.min(0.92, (progress - 0.45) / 0.55 * 0.92);
+      ctx3.fillStyle = "#000009";
+      ctx3.globalAlpha = darkAlpha;
+      ctx3.fillRect(0, 0, W2, H2);
+      ctx3.globalAlpha = 1;
+    }
+    if (progress > 0.28 && progress < 0.96) {
+      const fadeIn = Math.min(1, (progress - 0.28) / 0.18);
+      const fadeOut = progress > 0.8 ? 1 - (progress - 0.8) / 0.16 : 1;
+      ctx3.globalAlpha = Math.max(0, fadeIn * fadeOut);
+      ctx3.textAlign = "center";
+      ctx3.textBaseline = "middle";
+      ctx3.fillStyle = "#ff4400";
+      ctx3.font = "20px 'Press Start 2P', monospace";
+      ctx3.fillText("SHIP DESTROYED", W2 / 2, H2 / 2);
+      ctx3.globalAlpha = 1;
+      ctx3.textAlign = "left";
+      ctx3.textBaseline = "alphabetic";
+    }
   }
   renderCountdown() {
     const { ctx: ctx3 } = this;
@@ -1556,29 +1839,240 @@ var ChordCasterGame = class {
     }
     ctx3.globalAlpha = 1;
     ctx3.font = "8px 'Press Start 2P', monospace";
-    ctx3.fillStyle = "#aaaaaa";
     ctx3.textAlign = "right";
+    ctx3.fillStyle = "#aaaaaa";
     ctx3.fillText(String(this.score).padStart(6, "0"), W2 - 10, 20);
     if (this.selectedKey) {
       ctx3.fillStyle = this.colorTonic;
       ctx3.fillText(this.selectedKey.name.toUpperCase(), W2 - 10, 34);
     }
+    ctx3.fillStyle = "#555555";
+    ctx3.fillText(`RND ${String(this.round + 1).padStart(2, "0")}`, W2 - 10, 48);
+    const now = performance.now();
+    const viiReady = now >= this.viiCooldownEnd;
+    if (viiReady) {
+      ctx3.fillStyle = this.colorTonic;
+      ctx3.fillText("vii\xB0 READY", W2 - 10, H2 - 10);
+    } else {
+      const secs = Math.ceil((this.viiCooldownEnd - now) / 1e3);
+      ctx3.fillStyle = "#444444";
+      ctx3.fillText(`vii\xB0 [${secs}s]`, W2 - 10, H2 - 10);
+    }
+    const vReady = now >= this.vCooldownEnd;
+    if (!vReady) {
+      const secs = Math.ceil((this.vCooldownEnd - now) / 1e3);
+      ctx3.fillStyle = "#444444";
+      ctx3.fillText(`V [${secs}s]`, W2 - 10, H2 - 22);
+    }
     ctx3.textAlign = "left";
   }
-  renderWaveLabel() {
-    if (this.waveLabelTimer <= 0 || !this.waveLabel) return;
+  // ── Private: enemy drawing ────────────────────────────────────────────────
+  drawEnemy(e) {
+    if (e.state === "exploding") {
+      this.drawExplosion(e);
+      return;
+    }
     const { ctx: ctx3 } = this;
-    const fadeIn = Math.min(1, (WAVE_LABEL_DUR - this.waveLabelTimer) * 4);
-    const fadeOut = Math.min(1, this.waveLabelTimer * 2);
-    ctx3.globalAlpha = Math.min(fadeIn, fadeOut);
-    ctx3.fillStyle = "#ffffff";
-    ctx3.font = "8px 'Press Start 2P', monospace";
-    ctx3.textAlign = "center";
-    ctx3.fillText(this.waveLabel, W2 / 2, 22);
-    ctx3.textAlign = "left";
+    const ex = Math.round(e.x);
+    const ey = Math.round(e.y);
+    const timerFrac = e.maxTimer > 0 ? Math.max(0, e.timer / e.maxTimer) : 1;
+    const r = Math.round(160 + (1 - timerFrac) * 95);
+    const g = Math.round(55 * timerFrac);
+    const bodyColor = `rgb(${r},${g},20)`;
+    const glowSize = Math.round(6 + (1 - timerFrac) * 14);
+    const glowAlpha = 0.25 + (1 - timerFrac) * 0.4;
+    ctx3.fillStyle = `rgba(${r},20,10,${glowAlpha})`;
+    ctx3.fillRect(ex - glowSize, ey - glowSize, ENEMY_W + glowSize * 2, ENEMY_H + glowSize * 2);
+    ctx3.fillStyle = "#661111";
+    ctx3.fillRect(ex + 14, ey - 20, 8, 10);
+    ctx3.fillRect(ex + 16, ey - 28, 4, 10);
+    ctx3.fillRect(ex + 18, ey - 34, 2, 8);
+    ctx3.fillRect(ex + 64, ey - 20, 8, 10);
+    ctx3.fillRect(ex + 66, ey - 28, 4, 10);
+    ctx3.fillRect(ex + 68, ey - 34, 2, 8);
+    ctx3.fillStyle = bodyColor;
+    ctx3.fillRect(ex, ey, ENEMY_W, ENEMY_H);
+    ctx3.fillStyle = `rgba(0,0,0,0.25)`;
+    ctx3.fillRect(ex + 4, ey + 4, ENEMY_W - 8, ENEMY_H - 8);
+    ctx3.fillStyle = bodyColor;
+    ctx3.fillRect(ex - 14, ey + 18, 14, 10);
+    ctx3.fillRect(ex - 18, ey + 14, 8, 6);
+    ctx3.fillRect(ex - 18, ey + 28, 8, 6);
+    ctx3.fillRect(ex + ENEMY_W, ey + 18, 14, 10);
+    ctx3.fillRect(ex + ENEMY_W + 10, ey + 14, 8, 6);
+    ctx3.fillRect(ex + ENEMY_W + 10, ey + 28, 8, 6);
+    ctx3.fillStyle = "#1a0000";
+    ctx3.fillRect(ex + 10, ey + 12, 26, 20);
+    ctx3.fillRect(ex + 54, ey + 12, 26, 20);
+    const eyeR = Math.round(220 + (1 - timerFrac) * 35);
+    const eyeG = Math.round(40 + (1 - timerFrac) * 40);
+    ctx3.fillStyle = `rgb(${eyeR},${eyeG},10)`;
+    ctx3.fillRect(ex + 12, ey + 14, 22, 16);
+    ctx3.fillRect(ex + 56, ey + 14, 22, 16);
+    ctx3.fillStyle = "#110000";
+    ctx3.fillRect(ex + 18, ey + 18, 10, 8);
+    ctx3.fillRect(ex + 62, ey + 18, 10, 8);
+    ctx3.fillStyle = "#ffeeaa";
+    ctx3.fillRect(ex + 14, ey + 15, 4, 4);
+    ctx3.fillRect(ex + 58, ey + 15, 4, 4);
+    ctx3.fillStyle = "#440000";
+    ctx3.fillRect(ex + 10, ey + 8, 10, 5);
+    ctx3.fillRect(ex + 20, ey + 6, 10, 4);
+    ctx3.fillRect(ex + 30, ey + 8, 6, 4);
+    ctx3.fillRect(ex + 54, ey + 8, 6, 4);
+    ctx3.fillRect(ex + 60, ey + 6, 10, 4);
+    ctx3.fillRect(ex + 70, ey + 8, 10, 5);
+    ctx3.fillStyle = "#1a0000";
+    ctx3.fillRect(ex + 8, ey + 44, ENEMY_W - 16, 18);
+    ctx3.fillStyle = "#ddddcc";
+    for (let i = 0; i < 5; i++) {
+      ctx3.fillRect(ex + 12 + i * 14, ey + 44, 8, 10);
+    }
+    ctx3.fillStyle = "#1a0000";
+    for (let i = 0; i < 4; i++) {
+      ctx3.fillRect(ex + 20 + i * 14, ey + 44, 6, 6);
+    }
+    ctx3.fillStyle = "#662200";
+    for (let col = 0; col < 3; col++) {
+      for (let row = 0; row < 2; row++) {
+        ctx3.fillRect(ex + 34 + col * 8, ey + 30 + row * 8, 4, 4);
+      }
+    }
+    if (e.stateTimer > 0 && (e.state === "recoil" || e.state === "lunge" || e.state === "pushed")) {
+      const dur = e.state === "recoil" ? ANIM_RECOIL : e.state === "lunge" ? ANIM_LUNGE : ANIM_PUSHED;
+      ctx3.fillStyle = e.flashColor;
+      ctx3.globalAlpha = e.stateTimer / dur * 0.55;
+      ctx3.fillRect(ex, ey, ENEMY_W, ENEMY_H);
+      ctx3.globalAlpha = 1;
+    }
+    if (e.state !== "approaching" && e.state !== "retreating") {
+      this.drawEnemyDemand(e, ex, ey, timerFrac);
+    }
+  }
+  drawExplosion(e) {
+    const { ctx: ctx3 } = this;
+    const progress = 1 - e.stateTimer / ANIM_EXPLODING;
+    const cx = Math.round(e.x + ENEMY_W / 2);
+    const cy = Math.round(e.y + ENEMY_H / 2);
+    const flashAlpha = Math.max(0, 1 - progress * 2.5);
+    if (flashAlpha > 0) {
+      ctx3.fillStyle = "#ffffff";
+      ctx3.globalAlpha = flashAlpha;
+      ctx3.fillRect(cx - ENEMY_W / 2 - 10, cy - ENEMY_H / 2 - 10, ENEMY_W + 20, ENEMY_H + 20);
+      ctx3.globalAlpha = 1;
+    }
+    const ringSize = progress * 70;
+    ctx3.fillStyle = "#ff6600";
+    ctx3.globalAlpha = Math.max(0, 0.8 - progress);
+    ctx3.fillRect(cx - ringSize, cy - ringSize, ringSize * 2, ringSize * 2);
+    ctx3.fillStyle = "#ffcc00";
+    ctx3.globalAlpha = Math.max(0, 0.6 - progress * 0.8);
+    const innerRing = progress * 45;
+    ctx3.fillRect(cx - innerRing, cy - innerRing, innerRing * 2, innerRing * 2);
+    ctx3.globalAlpha = 1;
+    const fragColors = [this.colorDominant, "#ff3300", "#ff8800", "#ffcc00", "#ff4444", "#ffffff"];
+    for (let i = 0; i < 10; i++) {
+      const angle = Math.PI * 2 * i / 10 + progress * 0.4;
+      const dist = progress * 80;
+      const fx = cx + Math.cos(angle) * dist;
+      const fy = cy + Math.sin(angle) * dist;
+      const fragSize = Math.max(2, Math.round(16 * (1 - progress * 0.9)));
+      ctx3.fillStyle = fragColors[i % fragColors.length];
+      ctx3.globalAlpha = Math.max(0, 1 - progress * 1.2);
+      ctx3.fillRect(fx - fragSize / 2, fy - fragSize / 2, fragSize, fragSize);
+    }
     ctx3.globalAlpha = 1;
   }
-  // ── Private: drawing ──────────────────────────────────────────────────────
+  drawEnemyDemand(e, ex, ey, timerFrac) {
+    const { ctx: ctx3 } = this;
+    const cx = ex + ENEMY_W / 2;
+    const heartSpacing = 18;
+    const heartsStartX = cx - (e.maxHp - 1) * heartSpacing / 2;
+    for (let i = 0; i < e.maxHp; i++) {
+      ctx3.fillStyle = i < e.hp ? "#ff3355" : "#333333";
+      this.drawHeart(heartsStartX + i * heartSpacing, ey - 82, 6);
+    }
+    const barW = 220;
+    const barX = cx - barW / 2;
+    const barY = ey - 64;
+    ctx3.fillStyle = "#1a1a1a";
+    ctx3.fillRect(barX - 1, barY - 1, barW + 2, 12);
+    const fill = timerFrac;
+    ctx3.fillStyle = fill > 0.5 ? "#33cc44" : fill > 0.2 ? "#cccc33" : "#cc3333";
+    ctx3.fillRect(barX, barY, barW * fill, 10);
+    const displayNum = NUMERAL_DISPLAY[e.demand] ?? e.demand;
+    const pulse = e.timer < 3 ? 0.85 + 0.15 * Math.abs(Math.sin(Date.now() / 180)) : 1;
+    const lungeFlash = e.state === "lunge" && e.stateTimer > 0;
+    ctx3.save();
+    ctx3.translate(cx, ey - 96);
+    ctx3.scale(pulse, pulse);
+    ctx3.textAlign = "center";
+    ctx3.textBaseline = "middle";
+    ctx3.font = "26px 'Press Start 2P', monospace";
+    ctx3.fillStyle = lungeFlash ? "#ff3333" : this.colorDominant;
+    ctx3.fillText(displayNum, 0, 0);
+    ctx3.restore();
+    ctx3.textAlign = "left";
+    ctx3.textBaseline = "alphabetic";
+  }
+  drawHeart(cx, cy, r) {
+    const { ctx: ctx3 } = this;
+    ctx3.beginPath();
+    ctx3.moveTo(cx, cy + r * 1.2);
+    ctx3.bezierCurveTo(cx - r * 2, cy - r * 0.5, cx - r * 2.5, cy + r, cx, cy + r * 2.2);
+    ctx3.bezierCurveTo(cx + r * 2.5, cy + r, cx + r * 2, cy - r * 0.5, cx, cy + r * 1.2);
+    ctx3.closePath();
+    ctx3.fill();
+  }
+  renderTutorialOverlay() {
+    const { ctx: ctx3 } = this;
+    if (this.tutPhase === 0) {
+      this.drawInstructionBox(W2 / 2, H2 - 50, [
+        "AN ENEMY DEMANDS A CHORD!",
+        "PLAY THE DISPLAYED NUMERAL TO DEAL DAMAGE / I=SHIELD"
+      ]);
+    } else if (this.tutPhase === 1) {
+      this.drawInstructionBox(W2 / 2, H2 - 50, [
+        "V CHORD \u2192 BLAST!",
+        "PUSHES THE ENEMY BACK  /  OR PLAY THE DEMAND TO DAMAGE IT"
+      ]);
+    } else if (this.tutPhase === 2) {
+      const pulse = 0.6 + 0.4 * Math.abs(Math.sin(Date.now() / 600));
+      ctx3.textAlign = "center";
+      ctx3.textBaseline = "middle";
+      ctx3.font = "32px 'Press Start 2P', monospace";
+      ctx3.fillStyle = this.colorDominant;
+      ctx3.globalAlpha = pulse;
+      ctx3.fillText("READY!", W2 / 2, H2 / 2);
+      ctx3.globalAlpha = 1;
+      ctx3.textAlign = "left";
+      ctx3.textBaseline = "alphabetic";
+    }
+  }
+  drawInstructionBox(cx, cy, lines) {
+    const { ctx: ctx3 } = this;
+    const pad = 14;
+    const lineH = 18;
+    const boxH = lines.length * lineH + pad * 2;
+    const boxW = 500;
+    const x = cx - boxW / 2;
+    const y = cy - boxH / 2;
+    ctx3.fillStyle = "rgba(0,0,9,0.85)";
+    ctx3.fillRect(x, y, boxW, boxH);
+    ctx3.strokeStyle = this.colorTonic;
+    ctx3.lineWidth = 1;
+    ctx3.strokeRect(x, y, boxW, boxH);
+    ctx3.textAlign = "center";
+    ctx3.textBaseline = "middle";
+    lines.forEach((line, i) => {
+      ctx3.font = i === 0 ? "10px 'Press Start 2P', monospace" : "7px 'Press Start 2P', monospace";
+      ctx3.fillStyle = i === 0 ? "#ffffff" : "#888888";
+      ctx3.fillText(line, cx, y + pad + lineH * i + lineH / 2);
+    });
+    ctx3.textAlign = "left";
+    ctx3.textBaseline = "alphabetic";
+  }
+  // ── Private: ship drawing ─────────────────────────────────────────────────
   drawShip(cx, cy) {
     const { ctx: ctx3 } = this;
     ctx3.fillStyle = "#99ccff";
@@ -1600,214 +2094,72 @@ var ChordCasterGame = class {
     ctx3.fillRect(cx - 11, cy - 6, 5, 4);
     ctx3.fillRect(cx - 11, cy + 2, 5, 4);
   }
-  drawEnemy(x, y) {
+  drawBlasterBeam(targetX, shipY) {
     const { ctx: ctx3 } = this;
-    ctx3.fillStyle = "#cc3333";
-    ctx3.fillRect(x, y, ENEMY_W, ENEMY_H);
-    ctx3.fillStyle = "#ff6666";
-    ctx3.fillRect(x + 3, y + 3, 4, 4);
-    ctx3.fillRect(x + 13, y + 3, 4, 4);
-    ctx3.fillStyle = "#992222";
-    ctx3.fillRect(x + 4, y - 4, 2, 4);
-    ctx3.fillRect(x + 14, y - 4, 2, 4);
-    for (let i = 0; i < 3; i++) {
-      ctx3.fillRect(x + 3 + i * 5, y + 9, 3, 2);
-    }
-  }
-  drawProjectile(x, y) {
-    const { ctx: ctx3 } = this;
-    const grad = ctx3.createLinearGradient(x, 0, x + PROJ_W, 0);
-    grad.addColorStop(0, "transparent");
-    grad.addColorStop(1, this.colorDominant);
-    ctx3.fillStyle = grad;
-    ctx3.fillRect(x, y + 1, PROJ_W, PROJ_H - 2);
+    const fade = this.blasterTimer / BLASTER_DUR;
+    const startX = SHIP_X + 20;
+    const endX = Math.round(targetX);
+    const beamLen = endX - startX;
+    if (beamLen <= 0) return;
+    ctx3.fillStyle = "#ff6600";
+    ctx3.globalAlpha = fade * 0.35;
+    ctx3.fillRect(startX, shipY - 5, beamLen, 10);
+    ctx3.fillStyle = "#ffcc00";
+    ctx3.globalAlpha = fade * 0.75;
+    ctx3.fillRect(startX, shipY - 3, beamLen, 6);
     ctx3.fillStyle = "#ffffff";
-    ctx3.fillRect(x + PROJ_W - 4, y + 2, 4, PROJ_H - 4);
+    ctx3.globalAlpha = fade * 0.9;
+    ctx3.fillRect(startX, shipY - 1, beamLen, 3);
+    ctx3.fillStyle = "#ffffff";
+    ctx3.globalAlpha = fade;
+    ctx3.fillRect(startX - 4, shipY - 6, 10, 12);
+    ctx3.fillStyle = "#ffdd44";
+    ctx3.globalAlpha = fade * 0.8;
+    ctx3.fillRect(endX - 8, shipY - 8, 16, 16);
+    ctx3.globalAlpha = 1;
   }
-  // ── Private: spawning ─────────────────────────────────────────────────────
-  snapToNearestEnemyRow() {
-    const candidates = this.enemies.filter((e) => !e.dead && e.x > this.shipX).map((e) => e.y + ENEMY_H / 2);
-    if (candidates.length === 0) return;
-    const rowYs = [...new Set(candidates)];
-    let nearest = rowYs[0];
-    for (const y of rowYs) {
-      if (Math.abs(y - this.shipY) < Math.abs(nearest - this.shipY)) nearest = y;
-    }
-    this.shipY = nearest;
-    this.targetY = nearest;
+  drawEnemyBlastBeam(fromX, shipY) {
+    const { ctx: ctx3 } = this;
+    const fade = this.enemyBlastTimer / ENEMY_BLAST_DUR;
+    const endX = SHIP_X + 20;
+    const startX = Math.round(fromX);
+    const beamLen = endX - startX;
+    if (beamLen >= 0) return;
+    ctx3.fillStyle = "#ff0000";
+    ctx3.globalAlpha = fade * 0.35;
+    ctx3.fillRect(endX, shipY - 5, -beamLen, 10);
+    ctx3.fillStyle = "#ff4400";
+    ctx3.globalAlpha = fade * 0.75;
+    ctx3.fillRect(endX, shipY - 3, -beamLen, 6);
+    ctx3.fillStyle = "#ffaaaa";
+    ctx3.globalAlpha = fade * 0.9;
+    ctx3.fillRect(endX, shipY - 1, -beamLen, 3);
+    ctx3.fillStyle = "#ff2200";
+    ctx3.globalAlpha = fade;
+    ctx3.fillRect(startX - 6, shipY - 8, 12, 16);
+    ctx3.fillStyle = "#ff4400";
+    ctx3.globalAlpha = fade * 0.85;
+    ctx3.fillRect(endX - 10, shipY - 10, 20, 20);
+    ctx3.globalAlpha = 1;
   }
-  spawnProjectile() {
-    this.projectiles.push({
-      x: this.shipX + 12,
-      y: this.shipY - PROJ_H / 2,
-      dead: false
-    });
-  }
-  spawnParticles(cx, cy) {
-    const count = 8;
+  // ── Private: particles ────────────────────────────────────────────────────
+  spawnParticles(cx, cy, count, color) {
     for (let i = 0; i < count; i++) {
-      const angle = Math.PI * 2 * i / count + Math.random() * 0.4;
-      const speed = 50 + Math.random() * 90;
+      const angle = Math.PI * 2 * i / count + Math.random() * 0.5;
+      const speed = 60 + Math.random() * 130;
       this.particles.push({
         x: cx,
         y: cy,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
         life: 1,
-        color: this.colorDominant
+        color
       });
-    }
-  }
-  startTutorial() {
-    this.status = "tutorial";
-    this.tutPhase = 0;
-    this.tutTimer = 0;
-    this.tutFired = false;
-    this.enemies = [];
-    this.projectiles = [];
-    this.tutTargetY = H2 * 0.25;
-    this.onTutorialPhaseChange?.(0);
-  }
-  spawnTutorialEnemies() {
-    this.enemySpeed = 18;
-    const rowY = this.shipY - ENEMY_H / 2;
-    const startX = W2 * 0.55;
-    for (let col = 0; col < 4; col++) {
-      this.enemies.push({
-        x: startX + col * ENEMY_COL_SPACING,
-        y: rowY,
-        dead: false
-      });
-    }
-  }
-  renderTutorialOverlay() {
-    const { ctx: ctx3 } = this;
-    const pulse = 0.6 + 0.4 * Math.abs(Math.sin(Date.now() / 600));
-    if (this.tutPhase === 0) {
-      const tx = W2 * 0.65;
-      const ty = this.tutTargetY;
-      ctx3.strokeStyle = this.colorTonic;
-      ctx3.lineWidth = 2;
-      ctx3.globalAlpha = pulse;
-      ctx3.beginPath();
-      ctx3.arc(tx, ty, 18, 0, Math.PI * 2);
-      ctx3.stroke();
-      ctx3.beginPath();
-      ctx3.moveTo(tx - 24, ty);
-      ctx3.lineTo(tx - 14, ty);
-      ctx3.moveTo(tx + 14, ty);
-      ctx3.lineTo(tx + 24, ty);
-      ctx3.moveTo(tx, ty - 24);
-      ctx3.lineTo(tx, ty - 14);
-      ctx3.moveTo(tx, ty + 14);
-      ctx3.lineTo(tx, ty + 24);
-      ctx3.stroke();
-      ctx3.globalAlpha = 1;
-      ctx3.setLineDash([4, 6]);
-      ctx3.strokeStyle = this.colorTonic;
-      ctx3.globalAlpha = 0.3;
-      ctx3.beginPath();
-      ctx3.moveTo(this.shipX + 20, this.shipY);
-      ctx3.lineTo(tx - 20, ty);
-      ctx3.stroke();
-      ctx3.setLineDash([]);
-      ctx3.globalAlpha = 1;
-      const dir = ty < this.shipY ? -1 : 1;
-      ctx3.fillStyle = this.colorTonic;
-      ctx3.globalAlpha = pulse;
-      const ax = this.shipX + 4;
-      const ay = this.shipY + dir * 18;
-      ctx3.beginPath();
-      ctx3.moveTo(ax, ay + dir * 8);
-      ctx3.lineTo(ax - 6, ay);
-      ctx3.lineTo(ax + 6, ay);
-      ctx3.closePath();
-      ctx3.fill();
-      ctx3.globalAlpha = 1;
-      this.drawInstructionBox(
-        W2 / 2,
-        H2 - 50,
-        ["STEER YOUR SHIP", "HIGHER NOTE = UP  /  LOWER NOTE = DOWN"]
-      );
-    } else if (this.tutPhase === 1) {
-      const vChordName = this.selectedKey?.diatonicChords[4]?.chord.name ?? "V chord";
-      this.drawInstructionBox(
-        W2 / 2,
-        H2 - 50,
-        [`V CHORD \u2192 FIRE`, `PLAY ${vChordName.toUpperCase()}`]
-      );
-    } else if (this.tutPhase === 2) {
-      ctx3.textAlign = "center";
-      ctx3.textBaseline = "middle";
-      ctx3.font = "32px 'Press Start 2P', monospace";
-      ctx3.fillStyle = this.colorDominant;
-      ctx3.globalAlpha = pulse;
-      ctx3.fillText("READY!", W2 / 2, H2 / 2);
-      ctx3.globalAlpha = 1;
-      ctx3.textAlign = "left";
-      ctx3.textBaseline = "alphabetic";
-    }
-  }
-  drawInstructionBox(cx, cy, lines) {
-    const { ctx: ctx3 } = this;
-    const pad = 14;
-    const lineH = 18;
-    const boxH = lines.length * lineH + pad * 2;
-    const boxW = 440;
-    const x = cx - boxW / 2;
-    const y = cy - boxH / 2;
-    ctx3.fillStyle = "rgba(0,0,9,0.82)";
-    ctx3.fillRect(x, y, boxW, boxH);
-    ctx3.strokeStyle = this.colorTonic;
-    ctx3.lineWidth = 1;
-    ctx3.strokeRect(x, y, boxW, boxH);
-    ctx3.textAlign = "center";
-    ctx3.textBaseline = "middle";
-    lines.forEach((line, i) => {
-      ctx3.font = i === 0 ? "10px 'Press Start 2P', monospace" : "7px 'Press Start 2P', monospace";
-      ctx3.fillStyle = i === 0 ? "#ffffff" : "#888888";
-      ctx3.fillText(line, cx, y + pad + lineH * i + lineH / 2);
-    });
-    ctx3.textAlign = "left";
-    ctx3.textBaseline = "alphabetic";
-  }
-  spawnWave(idx) {
-    const cycle = Math.floor(idx / WAVES.length);
-    const def = WAVES[idx % WAVES.length];
-    if (!def) return;
-    this.enemySpeed = def.speed * (1 + cycle * 0.2);
-    this.waveLabel = def.label;
-    this.waveLabelTimer = WAVE_LABEL_DUR;
-    this.enemies = [];
-    for (let row = 0; row < def.rows; row++) {
-      for (let col = 0; col < def.cols; col++) {
-        this.enemies.push({
-          x: W2 + 50 + col * ENEMY_COL_SPACING,
-          y: ENEMY_START_Y + row * ENEMY_ROW_SPACING,
-          dead: false
-        });
-      }
     }
   }
 };
 
 // src/ui/game-panel.ts
-var CANVAS_H = 400;
-var CANVAS_PAD = 20;
-var SEMITONE_THRESHOLD = 1.5;
-var PX_PER_SEMITONE = 20;
-var SILENCE_RESET_FRAMES = 30;
-var BEND_WINDOW_MS = 300;
-var BEND_MIN_MS = 180;
-var BEND_SEMITONES = 2;
-var BEND_MAX_REVERSALS = 1;
-var BEND_COOLDOWN_MS = 1200;
-var BEND_STEP_PX = 70;
-var MIN_SHIP_X = 30;
-var MAX_SHIP_X = 150;
-var TRILL_WINDOW_MS = 300;
-var TRILL_MIN_REVERSALS = 4;
-var TRILL_COOLDOWN_MS = 1200;
 var KEY_PC = {
   G: 7,
   C: 0,
@@ -1818,21 +2170,6 @@ var KEY_PC = {
   Bb: 10
 };
 var game = null;
-var lastNoteFreq = 0;
-var silenceFrames = 0;
-var freqWindow = [];
-var lastBendTime = 0;
-var lastTrillTime = 0;
-function resetPitchState() {
-  lastNoteFreq = 0;
-  silenceFrames = 0;
-  freqWindow = [];
-  lastBendTime = 0;
-  lastTrillTime = 0;
-}
-function clamp(v, lo, hi) {
-  return Math.max(lo, Math.min(hi, v));
-}
 function initGamePanel() {
   const gamePanel = qs("#game-panel");
   const canvas3 = qs("#game-canvas");
@@ -1841,6 +2178,7 @@ function initGamePanel() {
   const skipTutBtn = qs("#game-tutorial-skip-btn");
   const toggleBtn = qs("#game-toggle-btn");
   const keyBtns = Array.from(document.querySelectorAll(".game-key-btn"));
+  const chordBtns = Array.from(document.querySelectorAll(".game-chord-btn"));
   game = new ChordCasterGame(canvas3);
   game.onTutorialPhaseChange = (phase) => {
     skipTutBtn.classList.toggle("hidden", phase < 0);
@@ -1866,7 +2204,6 @@ function initGamePanel() {
     gamePanel.classList.remove("game-running");
     toggleBtn.classList.remove("active");
     skipTutBtn.classList.add("hidden");
-    resetPitchState();
   }
   for (const btn of keyBtns) {
     btn.addEventListener("click", () => {
@@ -1881,73 +2218,23 @@ function initGamePanel() {
     const pc = KEY_PC[selectedKeyName];
     if (pc === void 0) return;
     const key = buildKey(pc, "major");
-    resetPitchState();
     gamePanel.classList.add("game-running");
     game.start(key);
   });
   canvas3.addEventListener("click", (e) => game?.handleClick(e));
-  on("pitch:detected", ({ frequency, confidence }) => {
-    if (!game || game.status !== "playing") return;
-    const now = performance.now();
-    if (confidence < 0.5) {
-      silenceFrames++;
-      if (silenceFrames >= SILENCE_RESET_FRAMES) lastNoteFreq = 0;
-      return;
-    }
-    silenceFrames = 0;
-    if (lastNoteFreq === 0) {
-      lastNoteFreq = frequency;
-    } else {
-      const semitoneDelta = 12 * Math.log2(frequency / lastNoteFreq);
-      if (Math.abs(semitoneDelta) >= SEMITONE_THRESHOLD) {
-        const yDelta = -Math.sign(semitoneDelta) * Math.abs(semitoneDelta) * PX_PER_SEMITONE;
-        game.targetY = clamp(game.targetY + yDelta, CANVAS_PAD, CANVAS_H - CANVAS_PAD);
-        lastNoteFreq = frequency;
-      }
-    }
-    freqWindow.push({ freq: frequency, t: now });
-    freqWindow = freqWindow.filter((s) => now - s.t < BEND_WINDOW_MS);
-    if (freqWindow.length >= 4) {
-      const oldest = freqWindow[0];
-      const newest = freqWindow[freqWindow.length - 1];
-      const windowMs = newest.t - oldest.t;
-      const totalSemitones = 12 * Math.log2(newest.freq / oldest.freq);
-      let reversals = 0;
-      for (let i = 1; i < freqWindow.length - 1; i++) {
-        const up = freqWindow[i].freq > freqWindow[i - 1].freq;
-        const up2 = freqWindow[i + 1].freq > freqWindow[i].freq;
-        if (up !== up2) reversals++;
-      }
-      if (windowMs >= BEND_MIN_MS && Math.abs(totalSemitones) >= BEND_SEMITONES && reversals <= BEND_MAX_REVERSALS && now - lastBendTime > BEND_COOLDOWN_MS) {
-        if (totalSemitones > 0) {
-          game.targetX = Math.min(game.targetX + BEND_STEP_PX, MAX_SHIP_X);
-        } else {
-          game.targetX = Math.max(game.targetX - BEND_STEP_PX, MIN_SHIP_X);
-        }
-        lastBendTime = now;
-        freqWindow = [];
-      }
-      const trillSlice = freqWindow.filter((s) => now - s.t < TRILL_WINDOW_MS);
-      if (trillSlice.length >= 6 && now - lastTrillTime > TRILL_COOLDOWN_MS) {
-        let trillReversals = 0;
-        for (let i = 1; i < trillSlice.length - 1; i++) {
-          const up = trillSlice[i].freq > trillSlice[i - 1].freq;
-          const up2 = trillSlice[i + 1].freq > trillSlice[i].freq;
-          if (up !== up2) trillReversals++;
-        }
-        if (trillReversals >= TRILL_MIN_REVERSALS) {
-          game.triggerEvade(now);
-          lastTrillTime = now;
-        }
-      }
-    }
-  });
+  for (const btn of chordBtns) {
+    btn.addEventListener("click", () => {
+      if (!game) return;
+      const numeral = btn.dataset["numeral"] ?? "";
+      game.playNumeral(numeral, performance.now());
+    });
+  }
   on("chord:confirmed", ({ chord }) => {
-    if (!game || game.status !== "playing" || !game.selectedKey) return;
+    if (!game || !game.selectedKey) return;
     const degree = game.selectedKey.scaleNotes.indexOf(chord.root);
     if (degree === -1) return;
     const numeral = game.selectedKey.diatonicChords[degree]?.nashvilleNumeral ?? "";
-    game.castSpell(numeral, performance.now());
+    game.playNumeral(numeral, performance.now());
   });
 }
 function stopGamePanel() {
