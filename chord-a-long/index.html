@@ -4,12 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chord-A-Long</title>
-  <link rel="stylesheet" href="styles/reset.css" />
-  <link rel="stylesheet" href="styles/layout.css" />
-  <link rel="stylesheet" href="styles/gps.css" />
-  <link rel="stylesheet" href="styles/log.css" />
-  <link rel="stylesheet" href="styles/visualizer.css" />
-  <link rel="stylesheet" href="styles/game.css" />
+  <link rel="stylesheet" href="/styles/reset.css" />
+  <link rel="stylesheet" href="/styles/layout.css" />
+  <link rel="stylesheet" href="/styles/gps.css" />
+  <link rel="stylesheet" href="/styles/log.css" />
+  <link rel="stylesheet" href="/styles/visualizer.css" />
+  <link rel="stylesheet" href="/styles/game.css" />
+  <link rel="stylesheet" href="/styles/lights.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
@@ -29,6 +30,7 @@
     <button id="clear-btn">✕ Clear</button>
     <button id="viz-toggle-btn">◈ Viz</button>
     <button id="game-toggle-btn">🎮 Chord Caster</button>
+    <button id="light-toggle-btn">✦ Lights</button>
     <span class="app-title">chord-a-long</span>
   </header>
 
@@ -118,6 +120,12 @@
   <div id="game-crt-overlay"></div>
 </div>
 
+<!-- Light rig (full-screen overlay) -->
+<div id="light-screen">
+  <canvas id="light-canvas"></canvas>
+  <button id="light-close-btn">✕</button>
+</div>
+
 <!-- Harmonic aurora visualizer (full-screen overlay) -->
 <div id="viz-screen">
   <canvas id="aurora-canvas"></canvas>
@@ -132,6 +140,6 @@
   </div>
 </div>
 
-<script src="dist/bundle.js" type="module"></script>
+<script src="/dist/bundle.js" type="module"></script>
 </body>
 </html>

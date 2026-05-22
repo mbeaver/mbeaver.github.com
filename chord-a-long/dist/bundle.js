@@ -1262,11 +1262,11 @@ var ChordCasterGame = class {
   dyingTimer = 0;
   lastEnemyDemand = null;
   onGameOver;
-  constructor(canvas3) {
-    this.canvas = canvas3;
-    const ctx3 = canvas3.getContext("2d");
-    if (!ctx3) throw new Error("Canvas 2d context unavailable");
-    this.ctx = ctx3;
+  constructor(canvas4) {
+    this.canvas = canvas4;
+    const ctx4 = canvas4.getContext("2d");
+    if (!ctx4) throw new Error("Canvas 2d context unavailable");
+    this.ctx = ctx4;
     this.generateStars();
   }
   // ── Public API ────────────────────────────────────────────────────────────
@@ -1499,19 +1499,19 @@ var ChordCasterGame = class {
   }
   startLoop() {
     if (this.rafId !== null) return;
-    const tick = (timestamp) => {
+    const tick2 = (timestamp) => {
       const dt = this.lastTime > 0 ? Math.min((timestamp - this.lastTime) / 1e3, 0.1) : 0;
       this.lastTime = timestamp;
       this.update(dt);
       this.render();
       if (this.status !== "idle") {
-        this.rafId = requestAnimationFrame(tick);
+        this.rafId = requestAnimationFrame(tick2);
       } else {
         this.rafId = null;
       }
     };
     this.lastTime = 0;
-    this.rafId = requestAnimationFrame(tick);
+    this.rafId = requestAnimationFrame(tick2);
   }
   // ── Private: update ───────────────────────────────────────────────────────
   update(dt) {
@@ -1696,13 +1696,13 @@ var ChordCasterGame = class {
   }
   // ── Private: render ───────────────────────────────────────────────────────
   render() {
-    const { ctx: ctx3 } = this;
-    ctx3.clearRect(0, 0, W2, H2);
-    ctx3.fillStyle = "#000009";
-    ctx3.fillRect(0, 0, W2, H2);
+    const { ctx: ctx4 } = this;
+    ctx4.clearRect(0, 0, W2, H2);
+    ctx4.fillStyle = "#000009";
+    ctx4.fillRect(0, 0, W2, H2);
     for (const s of this.stars) {
-      ctx3.fillStyle = "rgba(255,255,255,0.8)";
-      ctx3.fillRect(s.x, s.y, 1, 1);
+      ctx4.fillStyle = "rgba(255,255,255,0.8)";
+      ctx4.fillRect(s.x, s.y, 1, 1);
     }
     if (this.status === "countdown") {
       this.renderCountdown();
@@ -1718,11 +1718,11 @@ var ChordCasterGame = class {
     }
     if (this.status !== "playing" && this.status !== "tutorial") return;
     for (const p of this.particles) {
-      ctx3.globalAlpha = Math.max(0, p.life);
-      ctx3.fillStyle = p.color;
-      ctx3.fillRect(p.x - 2, p.y - 2, 4, 4);
+      ctx4.globalAlpha = Math.max(0, p.life);
+      ctx4.fillStyle = p.color;
+      ctx4.fillRect(p.x - 2, p.y - 2, 4, 4);
     }
-    ctx3.globalAlpha = 1;
+    ctx4.globalAlpha = 1;
     if (this.enemy) this.drawEnemy(this.enemy);
     const bobY = SHIP_Y + Math.sin(this.shipBob * 1.8) * 3;
     if (this.blasterTimer > 0 && this.enemy) {
@@ -1733,154 +1733,154 @@ var ChordCasterGame = class {
     }
     this.drawShip(SHIP_X, Math.round(bobY));
     if (this.shieldActive) {
-      ctx3.strokeStyle = this.colorTonic;
-      ctx3.lineWidth = 2;
-      ctx3.globalAlpha = 0.7 + 0.3 * Math.sin(Date.now() / 200);
-      ctx3.beginPath();
-      ctx3.arc(SHIP_X, bobY, 24, 0, Math.PI * 2);
-      ctx3.stroke();
-      ctx3.globalAlpha = 1;
+      ctx4.strokeStyle = this.colorTonic;
+      ctx4.lineWidth = 2;
+      ctx4.globalAlpha = 0.7 + 0.3 * Math.sin(Date.now() / 200);
+      ctx4.beginPath();
+      ctx4.arc(SHIP_X, bobY, 24, 0, Math.PI * 2);
+      ctx4.stroke();
+      ctx4.globalAlpha = 1;
     }
     if (this.shieldFlashTimer > 0) {
-      ctx3.fillStyle = this.colorTonic;
-      ctx3.globalAlpha = this.shieldFlashTimer / SHIELD_FLASH_DUR * 0.45;
-      ctx3.beginPath();
-      ctx3.arc(SHIP_X, bobY, 32, 0, Math.PI * 2);
-      ctx3.fill();
-      ctx3.globalAlpha = 1;
+      ctx4.fillStyle = this.colorTonic;
+      ctx4.globalAlpha = this.shieldFlashTimer / SHIELD_FLASH_DUR * 0.45;
+      ctx4.beginPath();
+      ctx4.arc(SHIP_X, bobY, 32, 0, Math.PI * 2);
+      ctx4.fill();
+      ctx4.globalAlpha = 1;
     }
     if (this.shipDamageFlashTimer > 0) {
-      ctx3.fillStyle = "#ff2200";
-      ctx3.globalAlpha = this.shipDamageFlashTimer / SHIP_DAMAGE_FLASH * 0.65;
-      ctx3.beginPath();
-      ctx3.arc(SHIP_X, bobY, 36, 0, Math.PI * 2);
-      ctx3.fill();
-      ctx3.globalAlpha = 1;
+      ctx4.fillStyle = "#ff2200";
+      ctx4.globalAlpha = this.shipDamageFlashTimer / SHIP_DAMAGE_FLASH * 0.65;
+      ctx4.beginPath();
+      ctx4.arc(SHIP_X, bobY, 36, 0, Math.PI * 2);
+      ctx4.fill();
+      ctx4.globalAlpha = 1;
     }
     if (this.healFlashTimer > 0) {
-      ctx3.fillStyle = this.colorTonic;
-      ctx3.globalAlpha = this.healFlashTimer / 0.5 * 0.22;
-      ctx3.fillRect(0, 0, W2, H2);
-      ctx3.globalAlpha = 1;
+      ctx4.fillStyle = this.colorTonic;
+      ctx4.globalAlpha = this.healFlashTimer / 0.5 * 0.22;
+      ctx4.fillRect(0, 0, W2, H2);
+      ctx4.globalAlpha = 1;
     }
     this.renderHUD();
     if (this.status === "tutorial") this.renderTutorialOverlay();
   }
   renderDying() {
-    const { ctx: ctx3 } = this;
+    const { ctx: ctx4 } = this;
     const elapsed = DYING_DUR - this.dyingTimer;
     const progress = elapsed / DYING_DUR;
     const shakeAmt = Math.max(0, (0.75 - elapsed) / 0.75) * 16;
     const ox = shakeAmt > 0 ? (Math.random() - 0.5) * shakeAmt * 2 : 0;
     const oy = shakeAmt > 0 ? (Math.random() - 0.5) * shakeAmt * 2 : 0;
-    ctx3.save();
-    ctx3.translate(ox, oy);
+    ctx4.save();
+    ctx4.translate(ox, oy);
     for (const s of this.stars) {
-      ctx3.fillStyle = "rgba(255,255,255,0.8)";
-      ctx3.fillRect(s.x, s.y, 1, 1);
+      ctx4.fillStyle = "rgba(255,255,255,0.8)";
+      ctx4.fillRect(s.x, s.y, 1, 1);
     }
     if (this.enemyBlastTimer > 0) {
       this.drawEnemyBlastBeam(this.enemyBlastFromX, SHIP_Y);
     }
     for (const p of this.particles) {
-      ctx3.globalAlpha = Math.max(0, p.life);
-      ctx3.fillStyle = p.color;
-      ctx3.fillRect(p.x - 2, p.y - 2, 4, 4);
+      ctx4.globalAlpha = Math.max(0, p.life);
+      ctx4.fillStyle = p.color;
+      ctx4.fillRect(p.x - 2, p.y - 2, 4, 4);
     }
-    ctx3.globalAlpha = 1;
+    ctx4.globalAlpha = 1;
     if (elapsed < 0.35) {
       const t = elapsed / 0.35;
-      ctx3.fillStyle = t < 0.4 ? "#ffffff" : "#ff4400";
-      ctx3.globalAlpha = (1 - t) * 0.9;
-      ctx3.fillRect(-20, -20, W2 + 40, H2 + 40);
-      ctx3.globalAlpha = 1;
+      ctx4.fillStyle = t < 0.4 ? "#ffffff" : "#ff4400";
+      ctx4.globalAlpha = (1 - t) * 0.9;
+      ctx4.fillRect(-20, -20, W2 + 40, H2 + 40);
+      ctx4.globalAlpha = 1;
     }
-    ctx3.restore();
+    ctx4.restore();
     if (progress > 0.45) {
       const darkAlpha = Math.min(0.92, (progress - 0.45) / 0.55 * 0.92);
-      ctx3.fillStyle = "#000009";
-      ctx3.globalAlpha = darkAlpha;
-      ctx3.fillRect(0, 0, W2, H2);
-      ctx3.globalAlpha = 1;
+      ctx4.fillStyle = "#000009";
+      ctx4.globalAlpha = darkAlpha;
+      ctx4.fillRect(0, 0, W2, H2);
+      ctx4.globalAlpha = 1;
     }
     if (progress > 0.28 && progress < 0.96) {
       const fadeIn = Math.min(1, (progress - 0.28) / 0.18);
       const fadeOut = progress > 0.8 ? 1 - (progress - 0.8) / 0.16 : 1;
-      ctx3.globalAlpha = Math.max(0, fadeIn * fadeOut);
-      ctx3.textAlign = "center";
-      ctx3.textBaseline = "middle";
-      ctx3.fillStyle = "#ff4400";
-      ctx3.font = "20px 'Press Start 2P', monospace";
-      ctx3.fillText("SHIP DESTROYED", W2 / 2, H2 / 2);
-      ctx3.globalAlpha = 1;
-      ctx3.textAlign = "left";
-      ctx3.textBaseline = "alphabetic";
+      ctx4.globalAlpha = Math.max(0, fadeIn * fadeOut);
+      ctx4.textAlign = "center";
+      ctx4.textBaseline = "middle";
+      ctx4.fillStyle = "#ff4400";
+      ctx4.font = "20px 'Press Start 2P', monospace";
+      ctx4.fillText("SHIP DESTROYED", W2 / 2, H2 / 2);
+      ctx4.globalAlpha = 1;
+      ctx4.textAlign = "left";
+      ctx4.textBaseline = "alphabetic";
     }
   }
   renderCountdown() {
-    const { ctx: ctx3 } = this;
-    ctx3.textAlign = "center";
-    ctx3.textBaseline = "middle";
-    ctx3.fillStyle = this.countdownValue === 0 ? this.colorDominant : "#ffffff";
-    ctx3.font = "80px 'Press Start 2P', monospace";
-    ctx3.fillText(this.countdownValue > 0 ? String(this.countdownValue) : "GO!", W2 / 2, H2 / 2);
-    ctx3.textAlign = "left";
-    ctx3.textBaseline = "alphabetic";
+    const { ctx: ctx4 } = this;
+    ctx4.textAlign = "center";
+    ctx4.textBaseline = "middle";
+    ctx4.fillStyle = this.countdownValue === 0 ? this.colorDominant : "#ffffff";
+    ctx4.font = "80px 'Press Start 2P', monospace";
+    ctx4.fillText(this.countdownValue > 0 ? String(this.countdownValue) : "GO!", W2 / 2, H2 / 2);
+    ctx4.textAlign = "left";
+    ctx4.textBaseline = "alphabetic";
   }
   renderGameOver() {
-    const { ctx: ctx3 } = this;
-    ctx3.fillStyle = "rgba(0,0,0,0.72)";
-    ctx3.fillRect(0, 0, W2, H2);
-    ctx3.textAlign = "center";
-    ctx3.textBaseline = "middle";
-    ctx3.fillStyle = this.colorDominant;
-    ctx3.font = "40px 'Press Start 2P', monospace";
-    ctx3.fillText("GAME OVER", W2 / 2, H2 / 2 - 70);
-    ctx3.fillStyle = "#ffffff";
-    ctx3.font = "16px 'Press Start 2P', monospace";
-    ctx3.fillText(`SCORE  ${this.score}`, W2 / 2, H2 / 2 - 10);
-    ctx3.fillStyle = this.colorDominant;
-    ctx3.fillRect(290, 250, 220, 40);
-    ctx3.fillStyle = "#0d0d1a";
-    ctx3.font = "10px 'Press Start 2P', monospace";
-    ctx3.fillText("PLAY AGAIN", W2 / 2, 270);
-    ctx3.textAlign = "left";
-    ctx3.textBaseline = "alphabetic";
+    const { ctx: ctx4 } = this;
+    ctx4.fillStyle = "rgba(0,0,0,0.72)";
+    ctx4.fillRect(0, 0, W2, H2);
+    ctx4.textAlign = "center";
+    ctx4.textBaseline = "middle";
+    ctx4.fillStyle = this.colorDominant;
+    ctx4.font = "40px 'Press Start 2P', monospace";
+    ctx4.fillText("GAME OVER", W2 / 2, H2 / 2 - 70);
+    ctx4.fillStyle = "#ffffff";
+    ctx4.font = "16px 'Press Start 2P', monospace";
+    ctx4.fillText(`SCORE  ${this.score}`, W2 / 2, H2 / 2 - 10);
+    ctx4.fillStyle = this.colorDominant;
+    ctx4.fillRect(290, 250, 220, 40);
+    ctx4.fillStyle = "#0d0d1a";
+    ctx4.font = "10px 'Press Start 2P', monospace";
+    ctx4.fillText("PLAY AGAIN", W2 / 2, 270);
+    ctx4.textAlign = "left";
+    ctx4.textBaseline = "alphabetic";
   }
   renderHUD() {
-    const { ctx: ctx3 } = this;
+    const { ctx: ctx4 } = this;
     for (let i = 0; i < 3; i++) {
-      ctx3.globalAlpha = i < this.hull ? 1 : 0.2;
+      ctx4.globalAlpha = i < this.hull ? 1 : 0.2;
       this.drawShipIcon(12 + i * 24, 16);
     }
-    ctx3.globalAlpha = 1;
-    ctx3.font = "8px 'Press Start 2P', monospace";
-    ctx3.textAlign = "right";
-    ctx3.fillStyle = "#aaaaaa";
-    ctx3.fillText(String(this.score).padStart(6, "0"), W2 - 10, 20);
+    ctx4.globalAlpha = 1;
+    ctx4.font = "8px 'Press Start 2P', monospace";
+    ctx4.textAlign = "right";
+    ctx4.fillStyle = "#aaaaaa";
+    ctx4.fillText(String(this.score).padStart(6, "0"), W2 - 10, 20);
     if (this.selectedKey) {
-      ctx3.fillStyle = this.colorTonic;
-      ctx3.fillText(this.selectedKey.name.toUpperCase(), W2 - 10, 34);
+      ctx4.fillStyle = this.colorTonic;
+      ctx4.fillText(this.selectedKey.name.toUpperCase(), W2 - 10, 34);
     }
-    ctx3.fillStyle = "#555555";
-    ctx3.fillText(`RND ${String(this.round + 1).padStart(2, "0")}`, W2 - 10, 48);
+    ctx4.fillStyle = "#555555";
+    ctx4.fillText(`RND ${String(this.round + 1).padStart(2, "0")}`, W2 - 10, 48);
     const now = performance.now();
     const viiReady = now >= this.viiCooldownEnd;
     if (viiReady) {
-      ctx3.fillStyle = this.colorTonic;
-      ctx3.fillText("vii\xB0 READY", W2 - 10, H2 - 10);
+      ctx4.fillStyle = this.colorTonic;
+      ctx4.fillText("vii\xB0 READY", W2 - 10, H2 - 10);
     } else {
       const secs = Math.ceil((this.viiCooldownEnd - now) / 1e3);
-      ctx3.fillStyle = "#444444";
-      ctx3.fillText(`vii\xB0 [${secs}s]`, W2 - 10, H2 - 10);
+      ctx4.fillStyle = "#444444";
+      ctx4.fillText(`vii\xB0 [${secs}s]`, W2 - 10, H2 - 10);
     }
     const vReady = now >= this.vCooldownEnd;
     if (!vReady) {
       const secs = Math.ceil((this.vCooldownEnd - now) / 1e3);
-      ctx3.fillStyle = "#444444";
-      ctx3.fillText(`V [${secs}s]`, W2 - 10, H2 - 22);
+      ctx4.fillStyle = "#444444";
+      ctx4.fillText(`V [${secs}s]`, W2 - 10, H2 - 22);
     }
-    ctx3.textAlign = "left";
+    ctx4.textAlign = "left";
   }
   // ── Private: enemy drawing ────────────────────────────────────────────────
   drawEnemy(e) {
@@ -1888,7 +1888,7 @@ var ChordCasterGame = class {
       this.drawExplosion(e);
       return;
     }
-    const { ctx: ctx3 } = this;
+    const { ctx: ctx4 } = this;
     const ex = Math.round(e.x);
     const ey = Math.round(e.y);
     const timerFrac = e.maxTimer > 0 ? Math.max(0, e.timer / e.maxTimer) : 1;
@@ -1897,95 +1897,95 @@ var ChordCasterGame = class {
     const bodyColor = `rgb(${r},${g},20)`;
     const glowSize = Math.round(6 + (1 - timerFrac) * 14);
     const glowAlpha = 0.25 + (1 - timerFrac) * 0.4;
-    ctx3.fillStyle = `rgba(${r},20,10,${glowAlpha})`;
-    ctx3.fillRect(ex - glowSize, ey - glowSize, ENEMY_W + glowSize * 2, ENEMY_H + glowSize * 2);
-    ctx3.fillStyle = "#661111";
-    ctx3.fillRect(ex + 14, ey - 20, 8, 10);
-    ctx3.fillRect(ex + 16, ey - 28, 4, 10);
-    ctx3.fillRect(ex + 18, ey - 34, 2, 8);
-    ctx3.fillRect(ex + 64, ey - 20, 8, 10);
-    ctx3.fillRect(ex + 66, ey - 28, 4, 10);
-    ctx3.fillRect(ex + 68, ey - 34, 2, 8);
-    ctx3.fillStyle = bodyColor;
-    ctx3.fillRect(ex, ey, ENEMY_W, ENEMY_H);
-    ctx3.fillStyle = `rgba(0,0,0,0.25)`;
-    ctx3.fillRect(ex + 4, ey + 4, ENEMY_W - 8, ENEMY_H - 8);
-    ctx3.fillStyle = bodyColor;
-    ctx3.fillRect(ex - 14, ey + 18, 14, 10);
-    ctx3.fillRect(ex - 18, ey + 14, 8, 6);
-    ctx3.fillRect(ex - 18, ey + 28, 8, 6);
-    ctx3.fillRect(ex + ENEMY_W, ey + 18, 14, 10);
-    ctx3.fillRect(ex + ENEMY_W + 10, ey + 14, 8, 6);
-    ctx3.fillRect(ex + ENEMY_W + 10, ey + 28, 8, 6);
-    ctx3.fillStyle = "#1a0000";
-    ctx3.fillRect(ex + 10, ey + 12, 26, 20);
-    ctx3.fillRect(ex + 54, ey + 12, 26, 20);
+    ctx4.fillStyle = `rgba(${r},20,10,${glowAlpha})`;
+    ctx4.fillRect(ex - glowSize, ey - glowSize, ENEMY_W + glowSize * 2, ENEMY_H + glowSize * 2);
+    ctx4.fillStyle = "#661111";
+    ctx4.fillRect(ex + 14, ey - 20, 8, 10);
+    ctx4.fillRect(ex + 16, ey - 28, 4, 10);
+    ctx4.fillRect(ex + 18, ey - 34, 2, 8);
+    ctx4.fillRect(ex + 64, ey - 20, 8, 10);
+    ctx4.fillRect(ex + 66, ey - 28, 4, 10);
+    ctx4.fillRect(ex + 68, ey - 34, 2, 8);
+    ctx4.fillStyle = bodyColor;
+    ctx4.fillRect(ex, ey, ENEMY_W, ENEMY_H);
+    ctx4.fillStyle = `rgba(0,0,0,0.25)`;
+    ctx4.fillRect(ex + 4, ey + 4, ENEMY_W - 8, ENEMY_H - 8);
+    ctx4.fillStyle = bodyColor;
+    ctx4.fillRect(ex - 14, ey + 18, 14, 10);
+    ctx4.fillRect(ex - 18, ey + 14, 8, 6);
+    ctx4.fillRect(ex - 18, ey + 28, 8, 6);
+    ctx4.fillRect(ex + ENEMY_W, ey + 18, 14, 10);
+    ctx4.fillRect(ex + ENEMY_W + 10, ey + 14, 8, 6);
+    ctx4.fillRect(ex + ENEMY_W + 10, ey + 28, 8, 6);
+    ctx4.fillStyle = "#1a0000";
+    ctx4.fillRect(ex + 10, ey + 12, 26, 20);
+    ctx4.fillRect(ex + 54, ey + 12, 26, 20);
     const eyeR = Math.round(220 + (1 - timerFrac) * 35);
     const eyeG = Math.round(40 + (1 - timerFrac) * 40);
-    ctx3.fillStyle = `rgb(${eyeR},${eyeG},10)`;
-    ctx3.fillRect(ex + 12, ey + 14, 22, 16);
-    ctx3.fillRect(ex + 56, ey + 14, 22, 16);
-    ctx3.fillStyle = "#110000";
-    ctx3.fillRect(ex + 18, ey + 18, 10, 8);
-    ctx3.fillRect(ex + 62, ey + 18, 10, 8);
-    ctx3.fillStyle = "#ffeeaa";
-    ctx3.fillRect(ex + 14, ey + 15, 4, 4);
-    ctx3.fillRect(ex + 58, ey + 15, 4, 4);
-    ctx3.fillStyle = "#440000";
-    ctx3.fillRect(ex + 10, ey + 8, 10, 5);
-    ctx3.fillRect(ex + 20, ey + 6, 10, 4);
-    ctx3.fillRect(ex + 30, ey + 8, 6, 4);
-    ctx3.fillRect(ex + 54, ey + 8, 6, 4);
-    ctx3.fillRect(ex + 60, ey + 6, 10, 4);
-    ctx3.fillRect(ex + 70, ey + 8, 10, 5);
-    ctx3.fillStyle = "#1a0000";
-    ctx3.fillRect(ex + 8, ey + 44, ENEMY_W - 16, 18);
-    ctx3.fillStyle = "#ddddcc";
+    ctx4.fillStyle = `rgb(${eyeR},${eyeG},10)`;
+    ctx4.fillRect(ex + 12, ey + 14, 22, 16);
+    ctx4.fillRect(ex + 56, ey + 14, 22, 16);
+    ctx4.fillStyle = "#110000";
+    ctx4.fillRect(ex + 18, ey + 18, 10, 8);
+    ctx4.fillRect(ex + 62, ey + 18, 10, 8);
+    ctx4.fillStyle = "#ffeeaa";
+    ctx4.fillRect(ex + 14, ey + 15, 4, 4);
+    ctx4.fillRect(ex + 58, ey + 15, 4, 4);
+    ctx4.fillStyle = "#440000";
+    ctx4.fillRect(ex + 10, ey + 8, 10, 5);
+    ctx4.fillRect(ex + 20, ey + 6, 10, 4);
+    ctx4.fillRect(ex + 30, ey + 8, 6, 4);
+    ctx4.fillRect(ex + 54, ey + 8, 6, 4);
+    ctx4.fillRect(ex + 60, ey + 6, 10, 4);
+    ctx4.fillRect(ex + 70, ey + 8, 10, 5);
+    ctx4.fillStyle = "#1a0000";
+    ctx4.fillRect(ex + 8, ey + 44, ENEMY_W - 16, 18);
+    ctx4.fillStyle = "#ddddcc";
     for (let i = 0; i < 5; i++) {
-      ctx3.fillRect(ex + 12 + i * 14, ey + 44, 8, 10);
+      ctx4.fillRect(ex + 12 + i * 14, ey + 44, 8, 10);
     }
-    ctx3.fillStyle = "#1a0000";
+    ctx4.fillStyle = "#1a0000";
     for (let i = 0; i < 4; i++) {
-      ctx3.fillRect(ex + 20 + i * 14, ey + 44, 6, 6);
+      ctx4.fillRect(ex + 20 + i * 14, ey + 44, 6, 6);
     }
-    ctx3.fillStyle = "#662200";
+    ctx4.fillStyle = "#662200";
     for (let col = 0; col < 3; col++) {
       for (let row = 0; row < 2; row++) {
-        ctx3.fillRect(ex + 34 + col * 8, ey + 30 + row * 8, 4, 4);
+        ctx4.fillRect(ex + 34 + col * 8, ey + 30 + row * 8, 4, 4);
       }
     }
     if (e.stateTimer > 0 && (e.state === "recoil" || e.state === "lunge" || e.state === "pushed")) {
       const dur = e.state === "recoil" ? ANIM_RECOIL : e.state === "lunge" ? ANIM_LUNGE : ANIM_PUSHED;
-      ctx3.fillStyle = e.flashColor;
-      ctx3.globalAlpha = e.stateTimer / dur * 0.55;
-      ctx3.fillRect(ex, ey, ENEMY_W, ENEMY_H);
-      ctx3.globalAlpha = 1;
+      ctx4.fillStyle = e.flashColor;
+      ctx4.globalAlpha = e.stateTimer / dur * 0.55;
+      ctx4.fillRect(ex, ey, ENEMY_W, ENEMY_H);
+      ctx4.globalAlpha = 1;
     }
     if (e.state !== "approaching" && e.state !== "retreating") {
       this.drawEnemyDemand(e, ex, ey, timerFrac);
     }
   }
   drawExplosion(e) {
-    const { ctx: ctx3 } = this;
+    const { ctx: ctx4 } = this;
     const progress = 1 - e.stateTimer / ANIM_EXPLODING;
     const cx = Math.round(e.x + ENEMY_W / 2);
     const cy = Math.round(e.y + ENEMY_H / 2);
     const flashAlpha = Math.max(0, 1 - progress * 2.5);
     if (flashAlpha > 0) {
-      ctx3.fillStyle = "#ffffff";
-      ctx3.globalAlpha = flashAlpha;
-      ctx3.fillRect(cx - ENEMY_W / 2 - 10, cy - ENEMY_H / 2 - 10, ENEMY_W + 20, ENEMY_H + 20);
-      ctx3.globalAlpha = 1;
+      ctx4.fillStyle = "#ffffff";
+      ctx4.globalAlpha = flashAlpha;
+      ctx4.fillRect(cx - ENEMY_W / 2 - 10, cy - ENEMY_H / 2 - 10, ENEMY_W + 20, ENEMY_H + 20);
+      ctx4.globalAlpha = 1;
     }
     const ringSize = progress * 70;
-    ctx3.fillStyle = "#ff6600";
-    ctx3.globalAlpha = Math.max(0, 0.8 - progress);
-    ctx3.fillRect(cx - ringSize, cy - ringSize, ringSize * 2, ringSize * 2);
-    ctx3.fillStyle = "#ffcc00";
-    ctx3.globalAlpha = Math.max(0, 0.6 - progress * 0.8);
+    ctx4.fillStyle = "#ff6600";
+    ctx4.globalAlpha = Math.max(0, 0.8 - progress);
+    ctx4.fillRect(cx - ringSize, cy - ringSize, ringSize * 2, ringSize * 2);
+    ctx4.fillStyle = "#ffcc00";
+    ctx4.globalAlpha = Math.max(0, 0.6 - progress * 0.8);
     const innerRing = progress * 45;
-    ctx3.fillRect(cx - innerRing, cy - innerRing, innerRing * 2, innerRing * 2);
-    ctx3.globalAlpha = 1;
+    ctx4.fillRect(cx - innerRing, cy - innerRing, innerRing * 2, innerRing * 2);
+    ctx4.globalAlpha = 1;
     const fragColors = [this.colorDominant, "#ff3300", "#ff8800", "#ffcc00", "#ff4444", "#ffffff"];
     for (let i = 0; i < 10; i++) {
       const angle = Math.PI * 2 * i / 10 + progress * 0.4;
@@ -1993,55 +1993,55 @@ var ChordCasterGame = class {
       const fx = cx + Math.cos(angle) * dist;
       const fy = cy + Math.sin(angle) * dist;
       const fragSize = Math.max(2, Math.round(16 * (1 - progress * 0.9)));
-      ctx3.fillStyle = fragColors[i % fragColors.length];
-      ctx3.globalAlpha = Math.max(0, 1 - progress * 1.2);
-      ctx3.fillRect(fx - fragSize / 2, fy - fragSize / 2, fragSize, fragSize);
+      ctx4.fillStyle = fragColors[i % fragColors.length];
+      ctx4.globalAlpha = Math.max(0, 1 - progress * 1.2);
+      ctx4.fillRect(fx - fragSize / 2, fy - fragSize / 2, fragSize, fragSize);
     }
-    ctx3.globalAlpha = 1;
+    ctx4.globalAlpha = 1;
   }
   drawEnemyDemand(e, ex, ey, timerFrac) {
-    const { ctx: ctx3 } = this;
+    const { ctx: ctx4 } = this;
     const cx = ex + ENEMY_W / 2;
     const heartSpacing = 18;
     const heartsStartX = cx - (e.maxHp - 1) * heartSpacing / 2;
     for (let i = 0; i < e.maxHp; i++) {
-      ctx3.fillStyle = i < e.hp ? "#ff3355" : "#333333";
+      ctx4.fillStyle = i < e.hp ? "#ff3355" : "#333333";
       this.drawHeart(heartsStartX + i * heartSpacing, ey - 82, 6);
     }
     const barW = 220;
     const barX = cx - barW / 2;
     const barY = ey - 64;
-    ctx3.fillStyle = "#1a1a1a";
-    ctx3.fillRect(barX - 1, barY - 1, barW + 2, 12);
+    ctx4.fillStyle = "#1a1a1a";
+    ctx4.fillRect(barX - 1, barY - 1, barW + 2, 12);
     const fill = timerFrac;
-    ctx3.fillStyle = fill > 0.5 ? "#33cc44" : fill > 0.2 ? "#cccc33" : "#cc3333";
-    ctx3.fillRect(barX, barY, barW * fill, 10);
+    ctx4.fillStyle = fill > 0.5 ? "#33cc44" : fill > 0.2 ? "#cccc33" : "#cc3333";
+    ctx4.fillRect(barX, barY, barW * fill, 10);
     const displayNum = NUMERAL_DISPLAY[e.demand] ?? e.demand;
     const pulse = e.timer < 3 ? 0.85 + 0.15 * Math.abs(Math.sin(Date.now() / 180)) : 1;
     const lungeFlash = e.state === "lunge" && e.stateTimer > 0;
-    ctx3.save();
-    ctx3.translate(cx, ey - 96);
-    ctx3.scale(pulse, pulse);
-    ctx3.textAlign = "center";
-    ctx3.textBaseline = "middle";
-    ctx3.font = "26px 'Press Start 2P', monospace";
-    ctx3.fillStyle = lungeFlash ? "#ff3333" : this.colorDominant;
-    ctx3.fillText(displayNum, 0, 0);
-    ctx3.restore();
-    ctx3.textAlign = "left";
-    ctx3.textBaseline = "alphabetic";
+    ctx4.save();
+    ctx4.translate(cx, ey - 96);
+    ctx4.scale(pulse, pulse);
+    ctx4.textAlign = "center";
+    ctx4.textBaseline = "middle";
+    ctx4.font = "26px 'Press Start 2P', monospace";
+    ctx4.fillStyle = lungeFlash ? "#ff3333" : this.colorDominant;
+    ctx4.fillText(displayNum, 0, 0);
+    ctx4.restore();
+    ctx4.textAlign = "left";
+    ctx4.textBaseline = "alphabetic";
   }
   drawHeart(cx, cy, r) {
-    const { ctx: ctx3 } = this;
-    ctx3.beginPath();
-    ctx3.moveTo(cx, cy + r * 1.2);
-    ctx3.bezierCurveTo(cx - r * 2, cy - r * 0.5, cx - r * 2.5, cy + r, cx, cy + r * 2.2);
-    ctx3.bezierCurveTo(cx + r * 2.5, cy + r, cx + r * 2, cy - r * 0.5, cx, cy + r * 1.2);
-    ctx3.closePath();
-    ctx3.fill();
+    const { ctx: ctx4 } = this;
+    ctx4.beginPath();
+    ctx4.moveTo(cx, cy + r * 1.2);
+    ctx4.bezierCurveTo(cx - r * 2, cy - r * 0.5, cx - r * 2.5, cy + r, cx, cy + r * 2.2);
+    ctx4.bezierCurveTo(cx + r * 2.5, cy + r, cx + r * 2, cy - r * 0.5, cx, cy + r * 1.2);
+    ctx4.closePath();
+    ctx4.fill();
   }
   renderTutorialOverlay() {
-    const { ctx: ctx3 } = this;
+    const { ctx: ctx4 } = this;
     if (this.tutPhase === 0) {
       this.drawInstructionBox(W2 / 2, H2 - 50, [
         "AN ENEMY DEMANDS A CHORD!",
@@ -2054,109 +2054,109 @@ var ChordCasterGame = class {
       ]);
     } else if (this.tutPhase === 2) {
       const pulse = 0.6 + 0.4 * Math.abs(Math.sin(Date.now() / 600));
-      ctx3.textAlign = "center";
-      ctx3.textBaseline = "middle";
-      ctx3.font = "32px 'Press Start 2P', monospace";
-      ctx3.fillStyle = this.colorDominant;
-      ctx3.globalAlpha = pulse;
-      ctx3.fillText("READY!", W2 / 2, H2 / 2);
-      ctx3.globalAlpha = 1;
-      ctx3.textAlign = "left";
-      ctx3.textBaseline = "alphabetic";
+      ctx4.textAlign = "center";
+      ctx4.textBaseline = "middle";
+      ctx4.font = "32px 'Press Start 2P', monospace";
+      ctx4.fillStyle = this.colorDominant;
+      ctx4.globalAlpha = pulse;
+      ctx4.fillText("READY!", W2 / 2, H2 / 2);
+      ctx4.globalAlpha = 1;
+      ctx4.textAlign = "left";
+      ctx4.textBaseline = "alphabetic";
     }
   }
   drawInstructionBox(cx, cy, lines) {
-    const { ctx: ctx3 } = this;
+    const { ctx: ctx4 } = this;
     const pad = 14;
     const lineH = 18;
     const boxH = lines.length * lineH + pad * 2;
     const boxW = 500;
     const x = cx - boxW / 2;
     const y = cy - boxH / 2;
-    ctx3.fillStyle = "rgba(0,0,9,0.85)";
-    ctx3.fillRect(x, y, boxW, boxH);
-    ctx3.strokeStyle = this.colorTonic;
-    ctx3.lineWidth = 1;
-    ctx3.strokeRect(x, y, boxW, boxH);
-    ctx3.textAlign = "center";
-    ctx3.textBaseline = "middle";
+    ctx4.fillStyle = "rgba(0,0,9,0.85)";
+    ctx4.fillRect(x, y, boxW, boxH);
+    ctx4.strokeStyle = this.colorTonic;
+    ctx4.lineWidth = 1;
+    ctx4.strokeRect(x, y, boxW, boxH);
+    ctx4.textAlign = "center";
+    ctx4.textBaseline = "middle";
     lines.forEach((line, i) => {
-      ctx3.font = i === 0 ? "10px 'Press Start 2P', monospace" : "7px 'Press Start 2P', monospace";
-      ctx3.fillStyle = i === 0 ? "#ffffff" : "#888888";
-      ctx3.fillText(line, cx, y + pad + lineH * i + lineH / 2);
+      ctx4.font = i === 0 ? "10px 'Press Start 2P', monospace" : "7px 'Press Start 2P', monospace";
+      ctx4.fillStyle = i === 0 ? "#ffffff" : "#888888";
+      ctx4.fillText(line, cx, y + pad + lineH * i + lineH / 2);
     });
-    ctx3.textAlign = "left";
-    ctx3.textBaseline = "alphabetic";
+    ctx4.textAlign = "left";
+    ctx4.textBaseline = "alphabetic";
   }
   // ── Private: ship drawing ─────────────────────────────────────────────────
   drawShip(cx, cy) {
-    const { ctx: ctx3 } = this;
-    ctx3.fillStyle = "#99ccff";
-    ctx3.fillRect(cx - 12, cy - 5, 22, 10);
-    ctx3.fillRect(cx + 10, cy - 3, 10, 6);
-    ctx3.fillStyle = "#223355";
-    ctx3.fillRect(cx - 2, cy - 3, 8, 6);
-    ctx3.fillStyle = "#6699cc";
-    ctx3.fillRect(cx - 18, cy - 10, 8, 6);
-    ctx3.fillRect(cx - 18, cy + 4, 8, 6);
-    ctx3.fillStyle = this.colorDominant;
-    ctx3.fillRect(cx - 16, cy - 2, 5, 4);
+    const { ctx: ctx4 } = this;
+    ctx4.fillStyle = "#99ccff";
+    ctx4.fillRect(cx - 12, cy - 5, 22, 10);
+    ctx4.fillRect(cx + 10, cy - 3, 10, 6);
+    ctx4.fillStyle = "#223355";
+    ctx4.fillRect(cx - 2, cy - 3, 8, 6);
+    ctx4.fillStyle = "#6699cc";
+    ctx4.fillRect(cx - 18, cy - 10, 8, 6);
+    ctx4.fillRect(cx - 18, cy + 4, 8, 6);
+    ctx4.fillStyle = this.colorDominant;
+    ctx4.fillRect(cx - 16, cy - 2, 5, 4);
   }
   drawShipIcon(cx, cy) {
-    const { ctx: ctx3 } = this;
-    ctx3.fillStyle = "#99ccff";
-    ctx3.fillRect(cx - 7, cy - 3, 14, 6);
-    ctx3.fillRect(cx + 7, cy - 2, 5, 4);
-    ctx3.fillRect(cx - 11, cy - 6, 5, 4);
-    ctx3.fillRect(cx - 11, cy + 2, 5, 4);
+    const { ctx: ctx4 } = this;
+    ctx4.fillStyle = "#99ccff";
+    ctx4.fillRect(cx - 7, cy - 3, 14, 6);
+    ctx4.fillRect(cx + 7, cy - 2, 5, 4);
+    ctx4.fillRect(cx - 11, cy - 6, 5, 4);
+    ctx4.fillRect(cx - 11, cy + 2, 5, 4);
   }
   drawBlasterBeam(targetX, shipY) {
-    const { ctx: ctx3 } = this;
+    const { ctx: ctx4 } = this;
     const fade = this.blasterTimer / BLASTER_DUR;
     const startX = SHIP_X + 20;
     const endX = Math.round(targetX);
     const beamLen = endX - startX;
     if (beamLen <= 0) return;
-    ctx3.fillStyle = "#ff6600";
-    ctx3.globalAlpha = fade * 0.35;
-    ctx3.fillRect(startX, shipY - 5, beamLen, 10);
-    ctx3.fillStyle = "#ffcc00";
-    ctx3.globalAlpha = fade * 0.75;
-    ctx3.fillRect(startX, shipY - 3, beamLen, 6);
-    ctx3.fillStyle = "#ffffff";
-    ctx3.globalAlpha = fade * 0.9;
-    ctx3.fillRect(startX, shipY - 1, beamLen, 3);
-    ctx3.fillStyle = "#ffffff";
-    ctx3.globalAlpha = fade;
-    ctx3.fillRect(startX - 4, shipY - 6, 10, 12);
-    ctx3.fillStyle = "#ffdd44";
-    ctx3.globalAlpha = fade * 0.8;
-    ctx3.fillRect(endX - 8, shipY - 8, 16, 16);
-    ctx3.globalAlpha = 1;
+    ctx4.fillStyle = "#ff6600";
+    ctx4.globalAlpha = fade * 0.35;
+    ctx4.fillRect(startX, shipY - 5, beamLen, 10);
+    ctx4.fillStyle = "#ffcc00";
+    ctx4.globalAlpha = fade * 0.75;
+    ctx4.fillRect(startX, shipY - 3, beamLen, 6);
+    ctx4.fillStyle = "#ffffff";
+    ctx4.globalAlpha = fade * 0.9;
+    ctx4.fillRect(startX, shipY - 1, beamLen, 3);
+    ctx4.fillStyle = "#ffffff";
+    ctx4.globalAlpha = fade;
+    ctx4.fillRect(startX - 4, shipY - 6, 10, 12);
+    ctx4.fillStyle = "#ffdd44";
+    ctx4.globalAlpha = fade * 0.8;
+    ctx4.fillRect(endX - 8, shipY - 8, 16, 16);
+    ctx4.globalAlpha = 1;
   }
   drawEnemyBlastBeam(fromX, shipY) {
-    const { ctx: ctx3 } = this;
+    const { ctx: ctx4 } = this;
     const fade = this.enemyBlastTimer / ENEMY_BLAST_DUR;
     const endX = SHIP_X + 20;
     const startX = Math.round(fromX);
     const beamLen = endX - startX;
     if (beamLen >= 0) return;
-    ctx3.fillStyle = "#ff0000";
-    ctx3.globalAlpha = fade * 0.35;
-    ctx3.fillRect(endX, shipY - 5, -beamLen, 10);
-    ctx3.fillStyle = "#ff4400";
-    ctx3.globalAlpha = fade * 0.75;
-    ctx3.fillRect(endX, shipY - 3, -beamLen, 6);
-    ctx3.fillStyle = "#ffaaaa";
-    ctx3.globalAlpha = fade * 0.9;
-    ctx3.fillRect(endX, shipY - 1, -beamLen, 3);
-    ctx3.fillStyle = "#ff2200";
-    ctx3.globalAlpha = fade;
-    ctx3.fillRect(startX - 6, shipY - 8, 12, 16);
-    ctx3.fillStyle = "#ff4400";
-    ctx3.globalAlpha = fade * 0.85;
-    ctx3.fillRect(endX - 10, shipY - 10, 20, 20);
-    ctx3.globalAlpha = 1;
+    ctx4.fillStyle = "#ff0000";
+    ctx4.globalAlpha = fade * 0.35;
+    ctx4.fillRect(endX, shipY - 5, -beamLen, 10);
+    ctx4.fillStyle = "#ff4400";
+    ctx4.globalAlpha = fade * 0.75;
+    ctx4.fillRect(endX, shipY - 3, -beamLen, 6);
+    ctx4.fillStyle = "#ffaaaa";
+    ctx4.globalAlpha = fade * 0.9;
+    ctx4.fillRect(endX, shipY - 1, -beamLen, 3);
+    ctx4.fillStyle = "#ff2200";
+    ctx4.globalAlpha = fade;
+    ctx4.fillRect(startX - 6, shipY - 8, 12, 16);
+    ctx4.fillStyle = "#ff4400";
+    ctx4.globalAlpha = fade * 0.85;
+    ctx4.fillRect(endX - 10, shipY - 10, 20, 20);
+    ctx4.globalAlpha = 1;
   }
   // ── Private: particles ────────────────────────────────────────────────────
   spawnParticles(cx, cy, count, color) {
@@ -2211,7 +2211,7 @@ var DIFFICULTY_ROUNDS = {
 var game = null;
 function initGamePanel() {
   const gamePanel = qs("#game-panel");
-  const canvas3 = qs("#game-canvas");
+  const canvas4 = qs("#game-canvas");
   const startBtn = qs("#game-start-btn");
   const quitBtn = qs("#game-quit-btn");
   const skipTutBtn = qs("#game-tutorial-skip-btn");
@@ -2220,7 +2220,7 @@ function initGamePanel() {
   const modeBtns = Array.from(document.querySelectorAll(".game-mode-btn"));
   const diffBtns = Array.from(document.querySelectorAll(".game-diff-btn"));
   const chordBtns = Array.from(document.querySelectorAll(".game-chord-btn"));
-  game = new ChordCasterGame(canvas3);
+  game = new ChordCasterGame(canvas4);
   game.onTutorialPhaseChange = (phase) => {
     skipTutBtn.classList.toggle("hidden", phase < 0);
   };
@@ -2288,7 +2288,7 @@ function initGamePanel() {
     gamePanel.classList.add("game-running");
     game.start(key, selectedDifficulty);
   });
-  canvas3.addEventListener("click", (e) => game?.handleClick(e));
+  canvas4.addEventListener("click", (e) => game?.handleClick(e));
   for (const btn of chordBtns) {
     btn.addEventListener("click", () => {
       if (!game) return;
@@ -2637,6 +2637,17 @@ function getSampleRate() {
 }
 function isListening() {
   return audioCtx !== null;
+}
+function getRMS() {
+  if (!analyser) return 0;
+  const buf = new Float32Array(analyser.fftSize);
+  analyser.getFloatTimeDomainData(buf);
+  let sum = 0;
+  for (let i = 0; i < buf.length; i++) {
+    const s = buf[i] ?? 0;
+    sum += s * s;
+  }
+  return Math.sqrt(sum / buf.length);
 }
 
 // src/ui/audio-viz.ts
@@ -3057,6 +3068,416 @@ function drawChromaticWheel(cx, cy, minDim) {
   }
 }
 
+// src/ui/light-rig.ts
+var BEAM_COUNT = 5;
+var MAX_BURSTS = 28;
+var HUE_MAP = {
+  "warm-gold": 45,
+  "subdominant": 45,
+  "orange": 28,
+  "cool-blue": 210,
+  "green": 140,
+  "purple": 270,
+  "neutral": 0
+};
+var HUE_PALETTE = [45, 28, 140, 210, 270];
+var screen2;
+var canvas3;
+var ctx3;
+var lightBtn;
+var active2 = false;
+var rafId4 = null;
+var ls = {
+  washHue: 45,
+  driftHue: 45,
+  washSaturation: 0.85,
+  washBrightness: 0.05,
+  beams: [],
+  bursts: [],
+  bloomActive: false,
+  bloomProgress: 0,
+  lastOnsetTime: 0,
+  rmsSmoothed: 0,
+  rollingAvg: 0,
+  choreMode: "unison",
+  chordsSinceSwitch: 0,
+  choreSwitchAt: 4,
+  soloIndex: 0,
+  subsetIndices: [0, 2],
+  groupDriftPhase: 0,
+  onsetIntervals: [],
+  tempoMs: 600,
+  hueCyclePhase: 0,
+  ambientTimer: 0
+};
+function initLightRig() {
+  screen2 = qs("#light-screen");
+  canvas3 = qs("#light-canvas");
+  lightBtn = qs("#light-toggle-btn");
+  const maybeCtx = canvas3.getContext("2d");
+  if (!maybeCtx) return;
+  ctx3 = maybeCtx;
+  for (let i = 0; i < BEAM_COUNT; i++) {
+    const t = (i + 1) / (BEAM_COUNT + 1);
+    const angle = (Math.random() - 0.5) * (Math.PI * 0.5);
+    ls.beams.push({
+      angle,
+      targetAngle: angle,
+      angleVelocity: 0,
+      hueOffset: (i - 2) * 12,
+      intensity: 0,
+      originX: t,
+      colorPhase: i / BEAM_COUNT,
+      staticAngle: (i - 2) * 0.35
+    });
+  }
+  lightBtn.addEventListener("click", enter2);
+  qs("#light-close-btn").addEventListener("click", exit2);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && active2) exit2();
+  });
+  const ro = new ResizeObserver(() => {
+    if (active2) resizeCanvas2();
+  });
+  ro.observe(screen2);
+  on("chord:confirmed", (e) => {
+    ls.washHue = HUE_MAP[e.chord.color] ?? 45;
+    ls.chordsSinceSwitch++;
+    if (ls.chordsSinceSwitch >= ls.choreSwitchAt) {
+      pickNewChoreMode();
+    }
+    updateBeamTargets(true);
+  });
+  on("key:changed", (e) => {
+    ls.washSaturation = e.key.mode === "major" ? 0.85 : 0.45;
+    ls.washBrightness = e.key.mode === "major" ? 0.05 : -0.05;
+  });
+  on("circuit:completed", (e) => {
+    if (e.circuit.tensionResolved && !ls.bloomActive) {
+      ls.bloomActive = true;
+      ls.bloomProgress = 0;
+    }
+  });
+  on("session:reset", () => {
+    ls.washHue = 45;
+    ls.driftHue = 45;
+    ls.washSaturation = 0.85;
+    ls.washBrightness = 0.05;
+    ls.bloomActive = false;
+    ls.bloomProgress = 0;
+    ls.rmsSmoothed = 0;
+    ls.rollingAvg = 0;
+    ls.bursts = [];
+    ls.choreMode = "unison";
+    ls.chordsSinceSwitch = 0;
+    ls.choreSwitchAt = 4;
+    ls.groupDriftPhase = 0;
+    ls.onsetIntervals = [];
+    ls.tempoMs = 600;
+    ls.hueCyclePhase = 0;
+    ls.ambientTimer = 0;
+    for (const beam of ls.beams) {
+      beam.intensity = 0;
+      beam.angleVelocity = 0;
+    }
+  });
+}
+function enter2() {
+  active2 = true;
+  screen2.classList.add("active");
+  lightBtn.classList.add("active");
+  requestAnimationFrame(() => {
+    resizeCanvas2();
+    if (rafId4 === null) rafId4 = requestAnimationFrame(rafLoop3);
+  });
+}
+function exit2() {
+  active2 = false;
+  screen2.classList.remove("active");
+  lightBtn.classList.remove("active");
+  if (rafId4 !== null) {
+    cancelAnimationFrame(rafId4);
+    rafId4 = null;
+  }
+}
+function resizeCanvas2() {
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas3.clientWidth;
+  const h = canvas3.clientHeight;
+  if (w === 0 || h === 0) return;
+  canvas3.width = Math.round(w * dpr);
+  canvas3.height = Math.round(h * dpr);
+}
+function rafLoop3(ts) {
+  if (!active2) {
+    rafId4 = null;
+    return;
+  }
+  tick(ts);
+  rafId4 = requestAnimationFrame(rafLoop3);
+}
+function tick(timestamp) {
+  const rms = getRMS();
+  const alpha = rms > ls.rmsSmoothed ? 0.15 : 0.04;
+  ls.rmsSmoothed += (rms - ls.rmsSmoothed) * alpha;
+  ls.rollingAvg += (rms - ls.rollingAvg) * 0.02;
+  const isOnset = rms > ls.rollingAvg * 1.4 && timestamp - ls.lastOnsetTime > 40;
+  if (isOnset) {
+    const interval = timestamp - ls.lastOnsetTime;
+    if (interval > 80 && interval < 2500 && ls.lastOnsetTime > 0) {
+      ls.onsetIntervals.push(interval);
+      if (ls.onsetIntervals.length > 8) ls.onsetIntervals.shift();
+      ls.tempoMs = ls.onsetIntervals.reduce((a, b) => a + b, 0) / ls.onsetIntervals.length;
+    }
+    ls.lastOnsetTime = timestamp;
+    spawnBurst();
+  }
+  const tempoFactor = Math.max(0.3, Math.min(2.5, 400 / ls.tempoMs));
+  ls.driftHue += (ls.washHue - ls.driftHue) * 3e-3;
+  ls.hueCyclePhase = (ls.hueCyclePhase + 4e-4 * tempoFactor) % 1;
+  ls.groupDriftPhase += 7e-3 * tempoFactor;
+  if (ls.bloomActive) {
+    ls.bloomProgress += 0.012;
+    if (ls.bloomProgress >= 1) {
+      ls.bloomActive = false;
+      ls.bloomProgress = 0;
+    }
+  }
+  ls.bursts = ls.bursts.filter((b) => b.progress < 1);
+  for (const b of ls.bursts) b.progress += b.speed;
+  ls.ambientTimer++;
+  const ambientInterval = Math.round(90 / tempoFactor);
+  if (ls.ambientTimer >= ambientInterval && ls.rmsSmoothed > 0.02) {
+    ls.ambientTimer = 0;
+    spawnAmbientBurst();
+  }
+  updateBeamTargets(false);
+  for (const beam of ls.beams) {
+    beam.angleVelocity += (beam.targetAngle - beam.angle) * 6e-3 * tempoFactor;
+    beam.angleVelocity *= 0.88;
+    beam.angle += beam.angleVelocity;
+    const intensityTarget = Math.min(ls.rmsSmoothed * 2.5, 1);
+    beam.intensity += (intensityTarget - beam.intensity) * 0.06;
+  }
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas3.width / dpr;
+  const h = canvas3.height / dpr;
+  if (w === 0 || h === 0) return;
+  render(ctx3, ls, w, h);
+}
+function pickNewChoreMode() {
+  const modes = ["unison", "solo", "subset"];
+  const others = modes.filter((m) => m !== ls.choreMode);
+  ls.choreMode = others[Math.floor(Math.random() * others.length)];
+  ls.soloIndex = Math.floor(Math.random() * BEAM_COUNT);
+  const allIndices = Array.from({ length: BEAM_COUNT }, (_, i) => i);
+  shuffle(allIndices);
+  ls.subsetIndices = allIndices.slice(0, Math.random() < 0.5 ? 2 : 3);
+  const staticPool = [-0.75, -0.45, -0.15, 0.15, 0.45, 0.75];
+  shuffle(staticPool);
+  let si = 0;
+  for (let i = 0; i < BEAM_COUNT; i++) {
+    const isActive2 = ls.choreMode === "unison" || ls.choreMode === "solo" && i === ls.soloIndex || ls.choreMode === "subset" && ls.subsetIndices.includes(i);
+    if (!isActive2) {
+      const base = staticPool[si++ % staticPool.length] ?? 0;
+      ls.beams[i].staticAngle = base + (Math.random() - 0.5) * 0.12;
+    }
+  }
+  ls.chordsSinceSwitch = 0;
+  ls.choreSwitchAt = 3 + Math.floor(Math.random() * 4);
+}
+function updateBeamTargets(isOnset) {
+  const tempoFactor = Math.max(0.3, Math.min(2.5, 400 / ls.tempoMs));
+  const driftAmp = 0.55 + tempoFactor * 0.25;
+  const phase = ls.groupDriftPhase;
+  if (ls.choreMode === "unison") {
+    const base = Math.sin(phase) * driftAmp;
+    if (isOnset) {
+      const snap = (Math.random() - 0.5) * (Math.PI * 0.8);
+      for (let i = 0; i < BEAM_COUNT; i++) {
+        ls.beams[i].targetAngle = snap + (i - 2) * 0.05;
+      }
+    } else {
+      for (let i = 0; i < BEAM_COUNT; i++) {
+        ls.beams[i].targetAngle = base + (i - 2) * 0.05;
+      }
+    }
+  } else if (ls.choreMode === "solo") {
+    for (let i = 0; i < BEAM_COUNT; i++) {
+      const beam = ls.beams[i];
+      if (i === ls.soloIndex) {
+        if (isOnset) {
+          beam.targetAngle = (Math.random() - 0.5) * (Math.PI * 0.9);
+        } else {
+          beam.targetAngle = Math.sin(phase * 1.6) * driftAmp;
+        }
+      } else {
+        beam.targetAngle = beam.staticAngle;
+      }
+    }
+  } else {
+    const subCount = ls.subsetIndices.length;
+    for (let i = 0; i < BEAM_COUNT; i++) {
+      const beam = ls.beams[i];
+      const subPos = ls.subsetIndices.indexOf(i);
+      if (subPos >= 0) {
+        if (isOnset) {
+          const snap = (Math.random() - 0.5) * (Math.PI * 0.7);
+          beam.targetAngle = subCount === 2 ? snap * (subPos === 0 ? 1 : -1) : snap + (subPos - 1) * 0.3;
+        } else {
+          const phaseOffset = subPos / subCount * Math.PI;
+          const sign = subCount === 2 ? subPos === 0 ? 1 : -1 : 1;
+          beam.targetAngle = sign * Math.sin(phase + phaseOffset) * driftAmp;
+        }
+      } else {
+        beam.targetAngle = beam.staticAngle;
+      }
+    }
+  }
+}
+function spawnBurst() {
+  const tempoFactor = Math.max(0.3, Math.min(2.5, 400 / ls.tempoMs));
+  const strength = ls.rmsSmoothed / Math.max(ls.rollingAvg, 1e-3);
+  const baseCount = strength > 2.2 ? 3 : strength > 1.7 ? 2 : 1;
+  const count = Math.min(5, Math.round(baseCount * tempoFactor));
+  for (let n = 0; n < count; n++) {
+    if (ls.bursts.length >= MAX_BURSTS) break;
+    let bx;
+    let by;
+    if (Math.random() < 0.4 && ls.beams.length > 0) {
+      const beam = ls.beams[Math.floor(Math.random() * BEAM_COUNT)];
+      const depth = 0.6 + Math.random() * 0.3;
+      bx = beam.originX + Math.sin(beam.angle) * depth;
+      by = depth;
+      bx = Math.max(0.05, Math.min(0.95, bx));
+    } else {
+      bx = 0.1 + Math.random() * 0.8;
+      by = 0.1 + Math.random() * 0.9;
+    }
+    ls.bursts.push({
+      x: bx,
+      y: by,
+      hue: (ls.washHue + (Math.random() - 0.5) * 40 + 360) % 360,
+      progress: 0,
+      speed: (7e-3 + Math.random() * 7e-3) * tempoFactor,
+      size: 0.15 + strength / 3 * 0.35 + Math.random() * 0.1,
+      alpha: 0.2 + Math.random() * 0.14
+    });
+  }
+}
+function spawnAmbientBurst() {
+  if (ls.bursts.length >= MAX_BURSTS) return;
+  const tempoFactor = Math.max(0.3, Math.min(2.5, 400 / ls.tempoMs));
+  ls.bursts.push({
+    x: 0.1 + Math.random() * 0.8,
+    y: 0.1 + Math.random() * 0.9,
+    hue: (ls.hueCyclePhase * 360 + (Math.random() - 0.5) * 60 + 360) % 360,
+    progress: 0,
+    speed: (0.015 + Math.random() * 0.01) * tempoFactor,
+    size: 0.06 + Math.random() * 0.06,
+    alpha: 0.06 + Math.random() * 0.04
+  });
+}
+function sampleHuePalette(phase) {
+  const n = HUE_PALETTE.length;
+  const pos = (phase % 1 + 1) % 1 * n;
+  const i = Math.floor(pos) % n;
+  const t = pos - Math.floor(pos);
+  const h0 = HUE_PALETTE[i];
+  const h1 = HUE_PALETTE[(i + 1) % n];
+  let diff = h1 - h0;
+  if (diff > 180) diff -= 360;
+  if (diff < -180) diff += 360;
+  return (h0 + diff * t + 360) % 360;
+}
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = arr[i];
+    arr[i] = arr[j];
+    arr[j] = tmp;
+  }
+}
+function render(c, s, w, h) {
+  const dpr = window.devicePixelRatio || 1;
+  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const cx = w / 2;
+  const cy = h / 2;
+  c.globalCompositeOperation = "source-over";
+  c.fillStyle = "rgba(8, 5, 12, 1)";
+  c.fillRect(0, 0, w, h);
+  const satPct = Math.round(s.washSaturation * 60);
+  const hueInt = Math.round(s.driftHue);
+  const brightOff = Math.round(s.washBrightness * 100);
+  const maxDim = Math.max(w, h);
+  const wash = c.createRadialGradient(cx, cy, 0, cx, cy, maxDim * 0.8);
+  wash.addColorStop(0, `hsla(${hueInt}, ${satPct}%, ${28 + brightOff}%, 0.30)`);
+  wash.addColorStop(1, `hsla(${hueInt}, ${satPct}%, ${10 + brightOff}%, 0)`);
+  c.globalCompositeOperation = "screen";
+  c.fillStyle = wash;
+  c.fillRect(0, 0, w, h);
+  c.globalCompositeOperation = "screen";
+  for (const b of s.bursts) {
+    const r = b.progress * b.size * maxDim;
+    const alpha = b.alpha * Math.pow(Math.max(0, 1 - b.progress), 1.5);
+    const bx = b.x * w;
+    const by = b.y * h;
+    const grad = c.createRadialGradient(bx, by, 0, bx, by, Math.max(r, 1));
+    grad.addColorStop(0, `hsla(${Math.round(b.hue)}, 75%, 65%, ${alpha})`);
+    grad.addColorStop(0.5, `hsla(${Math.round(b.hue)}, 60%, 40%, ${alpha * 0.4})`);
+    grad.addColorStop(1, `hsla(${Math.round(b.hue)}, 50%, 30%, 0)`);
+    c.fillStyle = grad;
+    c.fillRect(0, 0, w, h);
+  }
+  if (s.bloomActive) {
+    const r = s.bloomProgress * maxDim;
+    const alpha = (1 - s.bloomProgress) * 0.55;
+    const bloom = c.createRadialGradient(cx, cy, 0, cx, cy, Math.max(r, 1));
+    bloom.addColorStop(0, `hsla(45, 100%, 80%, ${alpha})`);
+    bloom.addColorStop(0.4, `hsla(45, 90%, 60%, ${alpha * 0.5})`);
+    bloom.addColorStop(1, `hsla(45, 80%, 40%, 0)`);
+    c.globalCompositeOperation = "screen";
+    c.fillStyle = bloom;
+    c.fillRect(0, 0, w, h);
+  }
+  c.globalCompositeOperation = "screen";
+  for (let i = 0; i < s.beams.length; i++) {
+    const beam = s.beams[i];
+    if (beam.intensity < 0.01) continue;
+    const hue = Math.round(sampleHuePalette((s.hueCyclePhase + beam.colorPhase) % 1));
+    const sat = Math.round(s.washSaturation * 100);
+    const ox = beam.originX * w;
+    const span = 0.1;
+    const leftA = beam.angle - span;
+    const rightA = beam.angle + span;
+    const bLen = h * 1.4;
+    const bx1 = ox + Math.sin(leftA) * bLen;
+    const by1 = Math.cos(leftA) * bLen;
+    const bx2 = ox + Math.sin(rightA) * bLen;
+    const by2 = Math.cos(rightA) * bLen;
+    const bLit = 80 + brightOff;
+    const grad = c.createLinearGradient(ox, 0, ox, h * 1.2);
+    grad.addColorStop(0, `hsla(${hue}, ${sat}%, ${bLit}%, ${beam.intensity * 0.85})`);
+    grad.addColorStop(1, `hsla(${hue}, ${sat}%, ${bLit - 30}%, 0)`);
+    c.save();
+    c.beginPath();
+    c.moveTo(ox, 0);
+    c.lineTo(bx1, by1);
+    c.lineTo(bx2, by2);
+    c.closePath();
+    c.clip();
+    c.fillStyle = grad;
+    c.fillRect(0, 0, w, h);
+    c.restore();
+  }
+  c.globalCompositeOperation = "source-over";
+  const vig = c.createRadialGradient(cx, cy, Math.min(w, h) * 0.25, cx, cy, maxDim * 0.85);
+  vig.addColorStop(0, "rgba(0, 0, 0, 0)");
+  vig.addColorStop(1, "rgba(0, 0, 0, 0.80)");
+  c.fillStyle = vig;
+  c.fillRect(0, 0, w, h);
+}
+
 // src/audio/pitch-detector.ts
 var MIN_FREQ2 = 80;
 var MAX_FREQ2 = 500;
@@ -3362,6 +3783,7 @@ function init() {
   initAudioViz();
   initVisualizer();
   initGamePanel();
+  initLightRig();
   console.log("Chord-A-Long loaded");
 }
 async function populateDevicePicker(sel) {
